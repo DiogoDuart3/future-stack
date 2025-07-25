@@ -29,7 +29,8 @@ function AdminChatRoute() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Get user session
-  const { data: session } = authClient.useSession();
+  const { data: session, isPending: isSessionPending } =
+    authClient.useSession();
   const userId = session?.user?.id || "";
   const userName = session?.user?.name || "Admin User";
 
@@ -124,18 +125,18 @@ function AdminChatRoute() {
     }
   };
 
-  // Redirect if not logged in
-  if (!session) {
-    return <Navigate to="/login" />;
-  }
-
   // Show loading while checking admin status
-  if (adminCheck.isLoading) {
+  if (adminCheck.isLoading || isSessionPending) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
+  }
+
+  // Redirect if not logged in
+  if (!session) {
+    return <Navigate to="/login" />;
   }
 
   // Redirect non-admin users
