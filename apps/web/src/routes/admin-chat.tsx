@@ -1,10 +1,5 @@
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { Loader2, Send } from "lucide-react";
@@ -39,12 +34,12 @@ function AdminChatRoute() {
   const userName = session?.user?.name || "Admin User";
 
   // Check if user is admin
-  const adminCheck = useQuery(
-    orpc.adminChat.checkAdminStatus.queryOptions(
-      { userId },
-      { enabled: !!userId }
-    )
-  );
+  const adminCheck = useQuery({
+    ...orpc.adminChat.checkAdminStatus.queryOptions({
+      input: { userId: session?.user?.id || "" },
+    }),
+    enabled: !!session?.user?.id,
+  });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -55,15 +50,24 @@ function AdminChatRoute() {
   }, [messages]);
 
   const connectToChat = () => {
-    if (!adminCheck.data?.isAdmin || !session) return;
-    
+    console.log("Connecting to chat");
+    console.log(adminCheck.data);
+    console.log(session);
+    if (!adminCheck.data?.isAdmin || !session) {
+      console.log("Not admin or not logged in");
+      return;
+    }
+
     setConnecting(true);
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws/admin-chat`;
-    
+    const wsUrl = `${protocol}//${import.meta.env.VITE_SERVER_URL.replace(
+      "http://",
+      ""
+    ).replace("https://", "")}/ws/admin-chat`;
+
     // Create WebSocket with authentication headers
     const ws = new WebSocket(wsUrl);
-    
+
     // Note: WebSocket doesn't support custom headers directly in the browser
     // The authentication will be handled via cookies automatically
     wsRef.current = ws;
@@ -75,11 +79,11 @@ function AdminChatRoute() {
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      
+
       if (data.type === "history") {
         setMessages(data.messages);
       } else if (data.type === "message") {
-        setMessages(prev => [...prev, data.message]);
+        setMessages((prev) => [...prev, data.message]);
       } else if (data.type === "user_joined") {
         // Optional: Add system message for user joining
         console.log(`${data.userName} joined the chat`);
@@ -104,10 +108,12 @@ function AdminChatRoute() {
     e.preventDefault();
     if (!newMessage.trim() || !wsRef.current || !connected) return;
 
-    wsRef.current.send(JSON.stringify({
-      type: "message",
-      message: newMessage.trim()
-    }));
+    wsRef.current.send(
+      JSON.stringify({
+        type: "message",
+        message: newMessage.trim(),
+      })
+    );
 
     setNewMessage("");
   };
@@ -144,9 +150,11 @@ function AdminChatRoute() {
           <div className="flex items-center justify-between">
             <CardTitle>Admin Chat</CardTitle>
             <div className="flex items-center space-x-2">
-              <div className={`h-2 w-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
+              <div
+                className={`h-2 w-2 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`}
+              />
               <span className="text-sm text-muted-foreground">
-                {connected ? 'Connected' : 'Disconnected'}
+                {connected ? "Connected" : "Disconnected"}
               </span>
               {!connected && !connecting && (
                 <Button size="sm" onClick={connectToChat}>
@@ -161,7 +169,7 @@ function AdminChatRoute() {
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent className="flex-1 flex flex-col p-0">
           {/* Messages area */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -173,13 +181,13 @@ function AdminChatRoute() {
               messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex ${message.userId === userId ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${message.userId === userId ? "justify-end" : "justify-start"}`}
                 >
                   <div
                     className={`max-w-xs lg:max-w-md px-3 py-2 rounded-lg ${
                       message.userId === userId
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted'
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted"
                     }`}
                   >
                     <div className="text-xs opacity-70 mb-1">

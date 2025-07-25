@@ -16,12 +16,15 @@ export const todoRouter = {
       imageUrl: z.string().optional()
     }))
     .handler(async ({ input }) => {
-      return await db
+      const result = await db
         .insert(todo)
         .values({
           text: input.text,
           imageUrl: input.imageUrl,
-        });
+        })
+        .returning();
+      
+      return result[0]; // Return the created todo with its ID
     }),
 
   uploadImage: publicProcedure
@@ -29,16 +32,19 @@ export const todoRouter = {
       todoId: z.number(),
       filename: z.string(),
       contentType: z.string(),
-      file: z.any() // Will be File/ArrayBuffer
+      fileData: z.string() // Base64 encoded file data
     }))
     .handler(async ({ input, context }) => {
       const env = context.env as CloudflareBindings;
       const r2 = createR2Client(env);
       
-      const key = generateImageKey(input.todoId, input.filename);
-      await uploadImage(r2, "ecomantem-todo-images", key, input.file, input.contentType);
+      // Decode base64 file data
+      const fileBuffer = Uint8Array.from(atob(input.fileData), c => c.charCodeAt(0));
       
-      const imageUrl = getImageUrl(env.CLOUDFLARE_ACCOUNT_ID, "ecomantem-todo-images", key);
+      const key = generateImageKey(input.todoId, input.filename);
+      await uploadImage(r2, "ecomantem-todo-images", key, fileBuffer, input.contentType);
+      
+      const imageUrl = await getImageUrl(r2, "ecomantem-todo-images", key);
       
       // Update the todo with the image URL
       await db

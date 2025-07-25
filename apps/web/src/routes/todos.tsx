@@ -31,9 +31,6 @@ function TodosRoute() {
     orpc.todo.create.mutationOptions({
       onSuccess: () => {
         todos.refetch();
-        setNewTodoText("");
-        setSelectedImage(null);
-        setImagePreview(null);
       },
     }),
   );
@@ -78,16 +75,36 @@ function TodosRoute() {
   const handleAddTodo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newTodoText.trim()) {
-      const result = await createMutation.mutateAsync({ text: newTodoText });
-      
-      if (selectedImage && result) {
-        // Upload image after creating todo
-        await uploadImageMutation.mutateAsync({
-          todoId: result[0].insertId, // Assuming Drizzle returns insertId
-          filename: selectedImage.name,
-          contentType: selectedImage.type,
-          file: selectedImage,
-        });
+      try {
+        const result = await createMutation.mutateAsync({ text: newTodoText });
+        
+        if (selectedImage && result && result.id) {
+          try {
+            // Convert file to base64
+            const fileBuffer = await selectedImage.arrayBuffer();
+            const base64String = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
+            
+            // Upload image after creating todo
+            await uploadImageMutation.mutateAsync({
+              todoId: result.id,
+              filename: selectedImage.name,
+              contentType: selectedImage.type,
+              fileData: base64String,
+            });
+          } catch (error) {
+            console.error('Failed to upload image:', error);
+          }
+        }
+        
+        // Clear form after successful creation
+        setNewTodoText("");
+        setSelectedImage(null);
+        setImagePreview(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      } catch (error) {
+        console.error('Failed to create todo:', error);
       }
     }
   };

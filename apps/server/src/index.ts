@@ -14,12 +14,15 @@ import { eq } from "drizzle-orm";
 const app = new Hono();
 
 app.use(logger());
-app.use("/*", cors({
-  origin: env.CORS_ORIGIN || "",
-  allowMethods: ["GET", "POST", "OPTIONS"],
-  allowHeaders: ["Content-Type", "Authorization"],
-  credentials: true,
-}));
+app.use(
+  "/*",
+  cors({
+    origin: env.CORS_ORIGIN || "",
+    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
 
 app.on(["POST", "GET"], "/api/auth/**", (c) => auth.handler(c.req.raw));
 
@@ -37,9 +40,6 @@ app.use("/rpc/*", async (c, next) => {
   await next();
 });
 
-
-
-
 // WebSocket route for admin chat
 app.get("/ws/admin-chat", async (c) => {
   const upgradeHeader = c.req.header("upgrade");
@@ -55,13 +55,17 @@ app.get("/ws/admin-chat", async (c) => {
 
   try {
     // Validate session using better-auth
-    const session = await auth.validateSession(c.req.raw);
+    const session = await auth.api.getSession(c.req.raw);
     if (!session || !session.user) {
       return c.text("Invalid session", 401);
     }
 
     // Verify user is admin
-    const userRecord = await db.select().from(user).where(eq(user.id, session.user.id)).limit(1);
+    const userRecord = await db
+      .select()
+      .from(user)
+      .where(eq(user.id, session.user.id))
+      .limit(1);
     if (!userRecord[0]?.isAdmin) {
       return c.text("Admin access required", 403);
     }
@@ -75,15 +79,15 @@ app.get("/ws/admin-chat", async (c) => {
       method: c.req.raw.method,
       headers: {
         ...Object.fromEntries(c.req.raw.headers.entries()),
-        'x-user-id': session.user.id,
-        'x-user-name': session.user.name || 'Admin User',
-        'x-user-email': session.user.email || '',
+        "x-user-id": session.user.id,
+        "x-user-name": session.user.name || "Admin User",
+        "x-user-email": session.user.email || "",
       },
     });
 
     return durableObject.fetch(wsRequest);
   } catch (error) {
-    console.error('WebSocket auth error:', error);
+    console.error("WebSocket auth error:", error);
     return c.text("Authentication failed", 401);
   }
 });

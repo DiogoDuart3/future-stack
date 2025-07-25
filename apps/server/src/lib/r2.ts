@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export function createR2Client(env: CloudflareBindings) {
   return new S3Client({
@@ -15,15 +16,23 @@ export async function uploadImage(
   r2: S3Client,
   bucketName: string,
   key: string,
-  file: File | ArrayBuffer,
+  file: File | ArrayBuffer | Uint8Array,
   contentType: string
 ) {
-  const body = file instanceof File ? await file.arrayBuffer() : file;
+  let body: Uint8Array;
+  
+  if (file instanceof File) {
+    body = new Uint8Array(await file.arrayBuffer());
+  } else if (file instanceof ArrayBuffer) {
+    body = new Uint8Array(file);
+  } else {
+    body = file; // Already Uint8Array
+  }
   
   const command = new PutObjectCommand({
     Bucket: bucketName,
     Key: key,
-    Body: new Uint8Array(body),
+    Body: body,
     ContentType: contentType,
   });
 
@@ -37,6 +46,13 @@ export function generateImageKey(todoId: number, filename: string): string {
   return `todos/${todoId}/${timestamp}.${extension}`;
 }
 
-export function getImageUrl(accountId: string, bucketName: string, key: string): string {
-  return `https://pub-${accountId}.r2.dev/${key}`;
+export async function getImageUrl(r2: S3Client, bucketName: string, key: string): Promise<string> {
+  const command = new GetObjectCommand({
+    Bucket: bucketName,
+    Key: key,
+  });
+  
+  // Generate a signed URL that expires in 1 hour
+  const signedUrl = await getSignedUrl(r2, command, { expiresIn: 3600 });
+  return signedUrl;
 }

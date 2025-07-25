@@ -8,14 +8,14 @@ import UserMenu from "./user-menu";
 
 export default function Header() {
   const { data: session } = authClient.useSession();
-  
+
   // Check if user is admin
-  const adminCheck = useQuery(
-    orpc.adminChat.checkAdminStatus.queryOptions(
-      { userId: session?.user?.id || "" },
-      { enabled: !!session?.user?.id }
-    )
-  );
+  const adminCheck = useQuery({
+    ...orpc.adminChat.checkAdminStatus.queryOptions({
+      input: { userId: session?.user?.id || "" },
+    }),
+    enabled: !!session?.user?.id,
+  });
 
   const baseLinks = [
     { to: "/", label: "Home" },
@@ -23,7 +23,7 @@ export default function Header() {
     { to: "/todos", label: "Todos" },
   ];
 
-  const links = adminCheck.data?.isAdmin 
+  const links = adminCheck.data?.isAdmin
     ? [...baseLinks, { to: "/admin-chat", label: "Admin Chat" }]
     : baseLinks;
 
@@ -33,10 +33,7 @@ export default function Header() {
         <nav className="flex gap-4 text-lg">
           {links.map(({ to, label }) => {
             return (
-              <Link
-                key={to}
-                to={to}
-              >
+              <Link key={to} to={to}>
                 {label}
               </Link>
             );
