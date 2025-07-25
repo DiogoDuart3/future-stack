@@ -9,12 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TodosOfflineRouteImport } from './routes/todos-offline'
 import { Route as TodosRouteImport } from './routes/todos'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AdminChatRouteImport } from './routes/admin-chat'
 import { Route as IndexRouteImport } from './routes/index'
 
+const TodosOfflineRoute = TodosOfflineRouteImport.update({
+  id: '/todos-offline',
+  path: '/todos-offline',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TodosRoute = TodosRouteImport.update({
   id: '/todos',
   path: '/todos',
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/todos': typeof TodosRoute
+  '/todos-offline': typeof TodosOfflineRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/todos': typeof TodosRoute
+  '/todos-offline': typeof TodosOfflineRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +70,33 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/todos': typeof TodosRoute
+  '/todos-offline': typeof TodosOfflineRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin-chat' | '/dashboard' | '/login' | '/todos'
+  fullPaths:
+    | '/'
+    | '/admin-chat'
+    | '/dashboard'
+    | '/login'
+    | '/todos'
+    | '/todos-offline'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin-chat' | '/dashboard' | '/login' | '/todos'
-  id: '__root__' | '/' | '/admin-chat' | '/dashboard' | '/login' | '/todos'
+  to:
+    | '/'
+    | '/admin-chat'
+    | '/dashboard'
+    | '/login'
+    | '/todos'
+    | '/todos-offline'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin-chat'
+    | '/dashboard'
+    | '/login'
+    | '/todos'
+    | '/todos-offline'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,10 +105,18 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   TodosRoute: typeof TodosRoute
+  TodosOfflineRoute: typeof TodosOfflineRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/todos-offline': {
+      id: '/todos-offline'
+      path: '/todos-offline'
+      fullPath: '/todos-offline'
+      preLoaderRoute: typeof TodosOfflineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/todos': {
       id: '/todos'
       path: '/todos'
@@ -125,6 +161,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   TodosRoute: TodosRoute,
+  TodosOfflineRoute: TodosOfflineRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

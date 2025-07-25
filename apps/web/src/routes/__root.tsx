@@ -1,5 +1,6 @@
 import Header from "@/components/header";
 import Loader from "@/components/loader";
+import { OfflineIndicator } from "@/components/offline-indicator";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { link, orpc } from "@/utils/orpc";
@@ -57,6 +58,7 @@ function RootComponent() {
     <>
       <HeadContent />
         <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+          <OfflineIndicator />
           <div className="grid grid-rows-[auto_1fr] h-svh">
             <Header />
             {isFetching ? <Loader /> : <Outlet />}
