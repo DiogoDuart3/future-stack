@@ -17,6 +17,23 @@ This project was created with [Better-T-Stack](https://github.com/AmanVarshney01
 - **PWA** - Progressive Web App support
 - **Turborepo** - Optimized monorepo build system
 
+## Screenshots
+
+### Home Page
+![Home Page](screenshots/home.png)
+
+### Dashboard
+![Dashboard](screenshots/dashboard.png)
+
+### Todos
+![Todos](screenshots/todos.png)
+
+### Offline Todos
+![Offline Todos](screenshots/offline%20todos.png)
+
+### Admin Chat
+![Admin Chat](screenshots/admin%20chat.png)
+
 ## Getting Started
 
 First, install the dependencies:
