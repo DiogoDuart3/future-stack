@@ -9,7 +9,9 @@ import { logger } from "hono/logger";
 import { AdminChat as AdminChatClass } from "./durable-objects/admin-chat";
 import { db } from "./db";
 import { user } from "./db/schema/auth";
+import { todo } from "./db/schema/todo";
 import { eq } from "drizzle-orm";
+import { createR2Client, uploadImage, generateImageKey, getImageUrl } from "./lib/r2";
 
 const app = new Hono();
 
@@ -25,6 +27,79 @@ app.use(
 );
 
 app.on(["POST", "GET"], "/api/auth/**", (c) => auth.handler(c.req.raw));
+
+// Direct HTTP endpoint for creating todos with images
+app.post("/api/todos/create-with-image", async (c) => {
+  try {
+    console.log('Creating todo with image via direct endpoint...');
+    
+    const contentType = c.req.header('content-type');
+    if (!contentType?.includes('multipart/form-data')) {
+      console.log('Invalid content type:', contentType);
+      return c.json({ error: 'Expected multipart/form-data' }, 400);
+    }
+
+    const formData = await c.req.formData();
+    const text = formData.get('text') as string;
+    const imageFile = formData.get('image') as File | null;
+
+    if (!text || text.trim().length === 0) {
+      return c.json({ error: 'Todo text is required' }, 400);
+    }
+
+    console.log('Form data parsed:', { text, hasImage: !!imageFile, fileName: imageFile?.name, fileSize: imageFile?.size });
+
+    // Create the todo first
+    const result = await db
+      .insert(todo)
+      .values({
+        text: text.trim(),
+        imageUrl: null,
+      })
+      .returning();
+
+    const createdTodo = result[0];
+    console.log('Todo created:', createdTodo);
+
+    // If there's an image, upload it to R2
+    if (imageFile && imageFile.size > 0) {
+      try {
+        console.log('Uploading image to R2...');
+        const r2 = createR2Client(c.env);
+
+        // Generate unique key for the image
+        const key = generateImageKey(createdTodo.id, imageFile.name);
+        
+        // Upload image to R2
+        await uploadImage(r2, "ecomantem-todo-images", key, imageFile, imageFile.type);
+        console.log('Image uploaded successfully');
+
+        // Generate signed URL
+        const imageUrl = await getImageUrl(r2, "ecomantem-todo-images", key);
+        console.log('Generated image URL:', imageUrl);
+
+        // Update todo with image URL
+        const updatedResult = await db
+          .update(todo)
+          .set({ imageUrl })
+          .where(eq(todo.id, createdTodo.id))
+          .returning();
+
+        console.log('Todo updated with image URL');
+        return c.json(updatedResult[0]);
+      } catch (error) {
+        console.error('Failed to upload image:', error);
+        // Return the todo without image rather than failing completely
+        return c.json(createdTodo);
+      }
+    }
+
+    return c.json(createdTodo);
+  } catch (error) {
+    console.error('Error creating todo with image:', error);
+    return c.json({ error: 'Failed to create todo' }, 500);
+  }
+});
 
 const handler = new RPCHandler(appRouter);
 app.use("/rpc/*", async (c, next) => {
