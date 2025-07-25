@@ -8,11 +8,12 @@ import {
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Loader2, Trash2, Upload, X } from "lucide-react";
+import { useState, useRef } from "react";
 
-  import { orpc } from "@/utils/orpc";
+import { orpc } from "@/utils/orpc";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/todos")({
@@ -21,31 +22,73 @@ export const Route = createFileRoute("/todos")({
 
 function TodosRoute() {
   const [newTodoText, setNewTodoText] = useState("");
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const todos = useQuery(orpc.todo.getAll.queryOptions());
-    const createMutation = useMutation(
-      orpc.todo.create.mutationOptions({
-        onSuccess: () => {
-          todos.refetch();
-          setNewTodoText("");
-        },
-      }),
-    );
-    const toggleMutation = useMutation(
-      orpc.todo.toggle.mutationOptions({
-        onSuccess: () => { todos.refetch() },
-      }),
-    );
-    const deleteMutation = useMutation(
-      orpc.todo.delete.mutationOptions({
-        onSuccess: () => { todos.refetch() },
-      }),
-    );
+  const todos = useQuery(orpc.todo.getAll.queryOptions());
+  const createMutation = useMutation(
+    orpc.todo.create.mutationOptions({
+      onSuccess: () => {
+        todos.refetch();
+        setNewTodoText("");
+        setSelectedImage(null);
+        setImagePreview(null);
+      },
+    }),
+  );
+  const uploadImageMutation = useMutation(
+    orpc.todo.uploadImage.mutationOptions({
+      onSuccess: () => {
+        todos.refetch();
+      },
+    }),
+  );
+  const toggleMutation = useMutation(
+    orpc.todo.toggle.mutationOptions({
+      onSuccess: () => { todos.refetch() },
+    }),
+  );
+  const deleteMutation = useMutation(
+    orpc.todo.delete.mutationOptions({
+      onSuccess: () => { todos.refetch() },
+    }),
+  );
 
-  const handleAddTodo = (e: React.FormEvent) => {
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleAddTodo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newTodoText.trim()) {
-      createMutation.mutate({ text: newTodoText });
+      const result = await createMutation.mutateAsync({ text: newTodoText });
+      
+      if (selectedImage && result) {
+        // Upload image after creating todo
+        await uploadImageMutation.mutateAsync({
+          todoId: result[0].insertId, // Assuming Drizzle returns insertId
+          filename: selectedImage.name,
+          contentType: selectedImage.type,
+          file: selectedImage,
+        });
+      }
     }
   };
 
@@ -65,26 +108,70 @@ function TodosRoute() {
           <CardDescription>Manage your tasks efficiently</CardDescription>
         </CardHeader>
         <CardContent>
-          <form
-            onSubmit={handleAddTodo}
-            className="mb-6 flex items-center space-x-2"
-          >
-            <Input
-              value={newTodoText}
-              onChange={(e) => setNewTodoText(e.target.value)}
-              placeholder="Add a new task..."
-              disabled={createMutation.isPending}
-            />
-            <Button
-              type="submit"
-              disabled={createMutation.isPending || !newTodoText.trim()}
-            >
-                {createMutation.isPending ? (
+          <form onSubmit={handleAddTodo} className="mb-6 space-y-4">
+            <div className="flex items-center space-x-2">
+              <Input
+                value={newTodoText}
+                onChange={(e) => setNewTodoText(e.target.value)}
+                placeholder="Add a new task..."
+                disabled={createMutation.isPending || uploadImageMutation.isPending}
+              />
+              <Button
+                type="submit"
+                disabled={createMutation.isPending || uploadImageMutation.isPending || !newTodoText.trim()}
+              >
+                {createMutation.isPending || uploadImageMutation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   "Add"
                 )}
-            </Button>
+              </Button>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="image-upload" className="text-sm font-medium">
+                Attach Image (optional)
+              </Label>
+              <div className="flex items-center space-x-2">
+                <Input
+                  ref={fileInputRef}
+                  id="image-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  disabled={createMutation.isPending || uploadImageMutation.isPending}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={createMutation.isPending || uploadImageMutation.isPending}
+                >
+                  <Upload className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              {imagePreview && (
+                <div className="relative">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="h-20 w-20 rounded-md object-cover"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute -right-2 -top-2 h-6 w-6"
+                    onClick={handleRemoveImage}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+            </div>
           </form>
 
             {todos.isLoading ? (
@@ -96,35 +183,50 @@ function TodosRoute() {
                 No todos yet. Add one above!
               </p>
             ) : (
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {todos.data?.map((todo) => (
                   <li
                     key={todo.id}
-                    className="flex items-center justify-between rounded-md border p-2"
+                    className="rounded-md border p-3"
                   >
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        checked={todo.completed}
-                        onCheckedChange={() =>
-                          handleToggleTodo(todo.id, todo.completed)
-                        }
-                        id={`todo-${todo.id}`}
-                      />
-                      <label
-                        htmlFor={`todo-${todo.id}`}
-                        className={`${todo.completed ? "line-through" : ""}`}
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start space-x-3 flex-1">
+                        <Checkbox
+                          checked={todo.completed}
+                          onCheckedChange={() =>
+                            handleToggleTodo(todo.id, todo.completed)
+                          }
+                          id={`todo-${todo.id}`}
+                          className="mt-1"
+                        />
+                        <div className="flex-1 space-y-2">
+                          <label
+                            htmlFor={`todo-${todo.id}`}
+                            className={`block cursor-pointer ${todo.completed ? "line-through text-muted-foreground" : ""}`}
+                          >
+                            {todo.text}
+                          </label>
+                          {todo.imageUrl && (
+                            <div className="mt-2">
+                              <img
+                                src={todo.imageUrl}
+                                alt="Todo attachment"
+                                className="h-24 w-24 rounded-md object-cover border"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteTodo(todo.id)}
+                        aria-label="Delete todo"
+                        className="ml-2"
                       >
-                        {todo.text}
-                      </label>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteTodo(todo.id)}
-                      aria-label="Delete todo"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </li>
                 ))}
               </ul>

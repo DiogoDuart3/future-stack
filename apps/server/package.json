@@ -16,14 +16,15 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
-    "dotenv": "^16.4.7",
-    "zod": "^4.0.2",
-    "@orpc/server": "^1.5.0",
-    "@orpc/client": "^1.5.0",
-    "hono": "^4.8.2",
-    "drizzle-orm": "^0.44.2",
+    "@aws-sdk/client-s3": "^3.850.0",
     "@neondatabase/serverless": "^1.0.1",
-    "better-auth": "^1.2.10"
+    "@orpc/client": "^1.5.0",
+    "@orpc/server": "^1.5.0",
+    "better-auth": "^1.2.10",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.44.2",
+    "hono": "^4.8.2",
+    "zod": "^4.0.2"
   },
   "devDependencies": {
     "tsdown": "^0.12.9",
