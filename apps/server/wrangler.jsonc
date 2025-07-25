@@ -16,5 +16,14 @@
       "binding": "TODO_IMAGES",
       "bucket_name": "ecomantem-todo-images"
     }
-  ]
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ADMIN_CHAT",
+        "class_name": "AdminChat",
+        "script_name": "ecomantem-server"
+      }
+    ]
+  }
 }

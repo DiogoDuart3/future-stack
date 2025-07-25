@@ -1,14 +1,31 @@
 import { Link } from "@tanstack/react-router";
+import { authClient } from "@/lib/auth-client";
+import { orpc } from "@/utils/orpc";
+import { useQuery } from "@tanstack/react-query";
 
 import { ModeToggle } from "./mode-toggle";
 import UserMenu from "./user-menu";
 
 export default function Header() {
-  const links = [
+  const { data: session } = authClient.useSession();
+  
+  // Check if user is admin
+  const adminCheck = useQuery(
+    orpc.adminChat.checkAdminStatus.queryOptions(
+      { userId: session?.user?.id || "" },
+      { enabled: !!session?.user?.id }
+    )
+  );
+
+  const baseLinks = [
     { to: "/", label: "Home" },
-      { to: "/dashboard", label: "Dashboard" },
+    { to: "/dashboard", label: "Dashboard" },
     { to: "/todos", label: "Todos" },
   ];
+
+  const links = adminCheck.data?.isAdmin 
+    ? [...baseLinks, { to: "/admin-chat", label: "Admin Chat" }]
+    : baseLinks;
 
   return (
     <div>
