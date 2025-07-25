@@ -6,7 +6,7 @@ import { auth } from "./lib/auth";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { AdminChat } from "./durable-objects/admin-chat";
+import { AdminChat as AdminChatClass } from "./durable-objects/admin-chat";
 import { db } from "./db";
 import { user } from "./db/schema/auth";
 import { eq } from "drizzle-orm";
@@ -93,4 +93,6 @@ app.get("/", (c) => {
 });
 
 export default app;
-export { AdminChat };
+
+// Export the Durable Object class
+export const AdminChat = AdminChatClass;

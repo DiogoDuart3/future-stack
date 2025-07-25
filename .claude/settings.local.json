@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(bun add:*)"
+      "Bash(bun add:*)",
+      "Bash(wrangler deploy:*)"
     ],
     "deny": []
   }

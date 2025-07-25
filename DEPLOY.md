@@ -239,9 +239,22 @@ wrangler route add "api.yourdomain.com/*" ecomantem-server
 - Verify session cookies are being sent
 - Check that authentication is working
 
-**"Durable Object Error"**
-- Verify Durable Object binding in `wrangler.jsonc`
-- Check that `AdminChat` class is exported in `src/index.ts`
+**"Durable Object Deployment Error"**
+- Error: `Cannot create binding for class 'AdminChat' that is not exported`
+  - Ensure `AdminChat` is exported in `src/index.ts`
+  - Use `export const AdminChat = AdminChatClass;` syntax
+- Error: `Cannot create binding... is not currently configured to implement Durable Objects`
+  - Add migration to `wrangler.jsonc`:
+  ```json
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["AdminChat"]
+    }
+  ]
+  ```
+- Error: `must create a namespace using a new_sqlite_classes migration`
+  - Use `new_sqlite_classes` instead of `new_classes` for free plan
 
 ### Debugging Commands
 
