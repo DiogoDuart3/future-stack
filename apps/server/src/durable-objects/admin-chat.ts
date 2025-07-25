@@ -1,3 +1,7 @@
+import { db } from "@/db";
+import { adminChatMessages } from "@/db/schema/admin_chat_messages";
+import { eq, desc } from "drizzle-orm";
+
 export interface Env {
   ADMIN_CHAT: DurableObjectNamespace;
 }
@@ -20,6 +24,7 @@ export class AdminChat {
   private state: DurableObjectState;
   private sessions: Set<AuthenticatedWebSocket>;
   private messages: ChatMessage[];
+  private initialized: boolean = false;
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
@@ -27,11 +32,50 @@ export class AdminChat {
     this.messages = [];
   }
 
+  private async initialize() {
+    if (this.initialized) return;
+    
+    try {
+      // Load the last 100 messages from the database, ordered by creation time
+      const dbMessages = await db
+        .select({
+          id: adminChatMessages.id,
+          message: adminChatMessages.message,
+          userId: adminChatMessages.userId,
+          userName: adminChatMessages.userName,
+          userEmail: adminChatMessages.userEmail,
+          createdAt: adminChatMessages.createdAt,
+        })
+        .from(adminChatMessages)
+        .orderBy(desc(adminChatMessages.createdAt))
+        .limit(100);
+
+      // Transform database records to ChatMessage format
+      this.messages = dbMessages
+        .reverse() // Reverse to get chronological order
+        .map((msg) => ({
+          id: msg.id.toString(),
+          userId: msg.userId,
+          userName: msg.userName,
+          message: msg.message,
+          timestamp: msg.createdAt.getTime(),
+        }));
+
+      this.initialized = true;
+    } catch (error) {
+      console.error("Error loading messages from database:", error);
+      this.initialized = true; // Mark as initialized even on error to prevent infinite retries
+    }
+  }
+
   async fetch(request: Request): Promise<Response> {
+    // Initialize messages from database on first request
+    await this.initialize();
+
     // Extract validated user info from headers (set by the main worker)
-    const userId = request.headers.get('x-user-id');
-    const userName = request.headers.get('x-user-name');
-    const userEmail = request.headers.get('x-user-email');
+    const userId = request.headers.get("x-user-id");
+    const userName = request.headers.get("x-user-name");
+    const userEmail = request.headers.get("x-user-email");
 
     if (!userId || !userName) {
       return new Response("Unauthorized", { status: 401 });
@@ -40,7 +84,11 @@ export class AdminChat {
     const webSocketPair = new WebSocketPair();
     const [client, server] = Object.values(webSocketPair);
 
-    await this.handleSession(server as AuthenticatedWebSocket, { userId, userName, userEmail });
+    await this.handleSession(server as AuthenticatedWebSocket, {
+      userId,
+      userName,
+      userEmail,
+    });
 
     return new Response(null, {
       status: 101,
@@ -49,34 +97,36 @@ export class AdminChat {
   }
 
   async handleSession(
-    webSocket: AuthenticatedWebSocket, 
+    webSocket: AuthenticatedWebSocket,
     userInfo: { userId: string; userName: string; userEmail: string | null }
   ) {
     webSocket.accept();
-    
+
     // Store user info on the WebSocket
     webSocket.userId = userInfo.userId;
     webSocket.userName = userInfo.userName;
-    webSocket.userEmail = userInfo.userEmail || '';
-    
+    webSocket.userEmail = userInfo.userEmail || "";
+
     this.sessions.add(webSocket);
 
     // Send recent messages to new connection
     const recentMessages = this.messages.slice(-50); // Last 50 messages
-    webSocket.send(JSON.stringify({
-      type: 'history',
-      messages: recentMessages
-    }));
+    webSocket.send(
+      JSON.stringify({
+        type: "history",
+        messages: recentMessages,
+      })
+    );
 
     // Send join notification to other users
     const joinMessage = {
-      type: 'user_joined',
+      type: "user_joined",
       userId: userInfo.userId,
       userName: userInfo.userName,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
-    
-    this.sessions.forEach(session => {
+
+    this.sessions.forEach((session) => {
       if (session !== webSocket && session.readyState === WebSocket.OPEN) {
         try {
           session.send(JSON.stringify(joinMessage));
@@ -86,18 +136,18 @@ export class AdminChat {
       }
     });
 
-    webSocket.addEventListener('message', async (event) => {
+    webSocket.addEventListener("message", async (event) => {
       try {
         const data = JSON.parse(event.data as string);
-        
-        if (data.type === 'message') {
+
+        if (data.type === "message") {
           // Use the server-validated user info, not client-provided data
           const message: ChatMessage = {
             id: crypto.randomUUID(),
             userId: webSocket.userId!,
             userName: webSocket.userName!,
             message: data.message,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           };
 
           // Basic message validation
@@ -109,7 +159,7 @@ export class AdminChat {
           message.message = message.message.trim().substring(0, 1000); // Max 1000 chars
 
           this.messages.push(message);
-          
+
           // Keep only last 100 messages in memory
           if (this.messages.length > 100) {
             this.messages = this.messages.slice(-100);
@@ -117,11 +167,11 @@ export class AdminChat {
 
           // Broadcast to all connected clients
           const messageData = JSON.stringify({
-            type: 'message',
-            message
+            type: "message",
+            message,
           });
 
-          this.sessions.forEach(session => {
+          this.sessions.forEach((session) => {
             if (session.readyState === WebSocket.OPEN) {
               try {
                 session.send(messageData);
@@ -131,24 +181,33 @@ export class AdminChat {
               }
             }
           });
+
+          await db.insert(adminChatMessages).values({
+            message: message.message,
+            userId: message.userId,
+            userName: message.userName,
+            userEmail: webSocket.userEmail || "",
+            createdAt: new Date(message.timestamp),
+            updatedAt: new Date(message.timestamp),
+          });
         }
       } catch (err) {
-        console.error('Error handling message:', err);
+        console.error("Error handling message:", err);
       }
     });
 
-    webSocket.addEventListener('close', () => {
+    webSocket.addEventListener("close", () => {
       this.sessions.delete(webSocket);
-      
+
       // Send leave notification to other users
       const leaveMessage = {
-        type: 'user_left',
+        type: "user_left",
         userId: userInfo.userId,
         userName: userInfo.userName,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
-      
-      this.sessions.forEach(session => {
+
+      this.sessions.forEach((session) => {
         if (session.readyState === WebSocket.OPEN) {
           try {
             session.send(JSON.stringify(leaveMessage));
@@ -159,7 +218,7 @@ export class AdminChat {
       });
     });
 
-    webSocket.addEventListener('error', () => {
+    webSocket.addEventListener("error", () => {
       this.sessions.delete(webSocket);
     });
   }
