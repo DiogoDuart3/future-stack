@@ -1,4 +1,4 @@
-# Ecomantem Setup Guide
+# Future Stack Setup Guide
 
 ## Environment Variables Setup
 
@@ -15,8 +15,8 @@
 ```bash
 # Install PostgreSQL locally
 # Create database and user
-createdb ecomantem
-createuser -P ecomantem_user
+createdb future_stack
+createuser -P future_stack_user
 ```
 
 ### 2. Authentication (Better Auth)
@@ -46,7 +46,7 @@ Set `CORS_ORIGIN` to your frontend URL:
    - Create token with R2:Edit permissions
 4. Create R2 bucket:
    ```bash
-   wrangler r2 bucket create ecomantem-todo-images
+   wrangler r2 bucket create future_stack-todo-images
    ```
 5. Get your Account ID from the right sidebar
 

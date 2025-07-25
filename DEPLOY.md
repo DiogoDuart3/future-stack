@@ -1,4 +1,4 @@
-# Ecomantem Deployment Guide
+# Future Stack Deployment Guide
 
 This guide covers deploying both the backend (Cloudflare Workers) and frontend (static hosting) for production.
 
@@ -19,7 +19,7 @@ This guide covers deploying both the backend (Cloudflare Workers) and frontend (
 
 ```bash
 # Create R2 bucket for images
-wrangler r2 bucket create ecomantem-todo-images
+wrangler r2 bucket create future-stack-todo-images
 
 # Verify bucket was created
 wrangler r2 bucket list
@@ -36,7 +36,7 @@ The Durable Object is already configured in `wrangler.jsonc`. Verify the configu
       {
         "name": "ADMIN_CHAT",
         "class_name": "AdminChat",
-        "script_name": "ecomantem-server"
+        "script_name": "future-stack-server"
       }
     ]
   }
@@ -99,7 +99,7 @@ bun run db:generate
 wrangler deploy
 
 # The deployment will output your Worker URL:
-# https://ecomantem-server.your-subdomain.workers.dev
+# https://future-stack-server.your-subdomain.workers.dev
 ```
 
 ### Step 6: Run Database Migrations
@@ -200,7 +200,7 @@ wrangler secret put CORS_ORIGIN
 **For Cloudflare Workers:**
 ```bash
 # Add custom domain to worker
-wrangler route add "api.yourdomain.com/*" ecomantem-server
+wrangler route add "api.yourdomain.com/*" future-stack-server
 ```
 
 **For Frontend:**
@@ -263,7 +263,7 @@ wrangler route add "api.yourdomain.com/*" ecomantem-server
 wrangler tail
 
 # Check R2 bucket contents
-wrangler r2 object list ecomantem-todo-images
+wrangler r2 object list future-stack-todo-images
 
 # Test database connection
 bun run db:studio

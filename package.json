@@ -1,5 +1,5 @@
 {
-  "name": "ecomantem",
+  "name": "future-stack",
   "private": true,
   "workspaces": [
     "apps/*",
