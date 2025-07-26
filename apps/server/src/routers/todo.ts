@@ -4,6 +4,8 @@ import { db } from "../db";
 import { todo } from "../db/schema/todo";
 import { publicProcedure } from "../lib/orpc";
 import { createR2Client, uploadImage, generateImageKey, getImageUrl } from "../lib/r2";
+import { broadcastSystemNotification } from "../lib/broadcast";
+import type { Env } from "../types/global";
 
 export const todoRouter = {
   getAll: publicProcedure.handler(async () => {
@@ -15,7 +17,7 @@ export const todoRouter = {
       text: z.string().min(1),
       imageUrl: z.string().optional()
     }))
-    .handler(async ({ input }) => {
+    .handler(async ({ input, context }) => {
       const result = await db
         .insert(todo)
         .values({
@@ -24,9 +26,17 @@ export const todoRouter = {
         })
         .returning();
       
+      // Example: Broadcast a notification when a new todo is created
+      try {
+        const env = context.env as Env;
+        await broadcastSystemNotification(env, `New todo created: "${input.text}"`);
+      } catch (error) {
+        console.error("Failed to broadcast todo creation:", error);
+        // Don't fail the todo creation if broadcast fails
+      }
+      
       return result[0]; // Return the created todo with its ID
     }),
-
 
   uploadImage: publicProcedure
     .input(z.object({
@@ -43,7 +53,7 @@ export const todoRouter = {
         dataLength: input.fileData.length 
       });
       
-      const env = context.env as CloudflareBindings;
+      const env = context.env as Env;
       const r2 = createR2Client(env);
       
       try {
@@ -86,14 +96,25 @@ export const todoRouter = {
 
   delete: publicProcedure
     .input(z.object({ id: z.number() }))
-    .handler(async ({ input }) => {
-      return await db.delete(todo).where(eq(todo.id, input.id));
+    .handler(async ({ input, context }) => {
+      const result = await db.delete(todo).where(eq(todo.id, input.id));
+      
+      // Example: Broadcast a notification when a todo is deleted
+      try {
+        const env = context.env as Env;
+        await broadcastSystemNotification(env, `Todo deleted with ID: ${input.id}`);
+      } catch (error) {
+        console.error("Failed to broadcast todo deletion:", error);
+        // Don't fail the todo deletion if broadcast fails
+      }
+      
+      return result;
     }),
 
   // Debug endpoint to test R2 connection
   testR2: publicProcedure.handler(async ({ context }) => {
     try {
-      const env = context.env as CloudflareBindings;
+      const env = context.env as Env;
       console.log('R2 credentials check:', {
         accountId: !!env.CLOUDFLARE_ACCOUNT_ID,
         accessKey: !!env.R2_ACCESS_KEY_ID,

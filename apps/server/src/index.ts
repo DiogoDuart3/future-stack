@@ -11,9 +11,21 @@ import { db } from "./db";
 import { user } from "./db/schema/auth";
 import { todo } from "./db/schema/todo";
 import { eq } from "drizzle-orm";
-import { createR2Client, uploadImage, generateImageKey, getImageUrl } from "./lib/r2";
+import {
+  createR2Client,
+  uploadImage,
+  generateImageKey,
+  getImageUrl,
+} from "./lib/r2";
+import { broadcastToAdminChat } from "./lib/broadcast";
+import type {
+  Env,
+  BroadcastMessageRequest,
+  BroadcastMessageResponse,
+  ErrorResponse,
+} from "./types/global";
 
-const app = new Hono();
+const app = new Hono<{ Bindings: Env }>();
 
 app.use(logger());
 app.use(
@@ -31,23 +43,28 @@ app.on(["POST", "GET"], "/api/auth/**", (c) => auth.handler(c.req.raw));
 // Direct HTTP endpoint for creating todos with images
 app.post("/api/todos/create-with-image", async (c) => {
   try {
-    console.log('Creating todo with image via direct endpoint...');
-    
-    const contentType = c.req.header('content-type');
-    if (!contentType?.includes('multipart/form-data')) {
-      console.log('Invalid content type:', contentType);
-      return c.json({ error: 'Expected multipart/form-data' }, 400);
+    console.log("Creating todo with image via direct endpoint...");
+
+    const contentType = c.req.header("content-type");
+    if (!contentType?.includes("multipart/form-data")) {
+      console.log("Invalid content type:", contentType);
+      return c.json({ error: "Expected multipart/form-data" }, 400);
     }
 
     const formData = await c.req.formData();
-    const text = formData.get('text') as string;
-    const imageFile = formData.get('image') as File | null;
+    const text = formData.get("text") as string;
+    const imageFile = formData.get("image") as File | null;
 
     if (!text || text.trim().length === 0) {
-      return c.json({ error: 'Todo text is required' }, 400);
+      return c.json({ error: "Todo text is required" }, 400);
     }
 
-    console.log('Form data parsed:', { text, hasImage: !!imageFile, fileName: imageFile?.name, fileSize: imageFile?.size });
+    console.log("Form data parsed:", {
+      text,
+      hasImage: !!imageFile,
+      fileName: imageFile?.name,
+      fileSize: imageFile?.size,
+    });
 
     // Create the todo first
     const result = await db
@@ -59,24 +76,30 @@ app.post("/api/todos/create-with-image", async (c) => {
       .returning();
 
     const createdTodo = result[0];
-    console.log('Todo created:', createdTodo);
+    console.log("Todo created:", createdTodo);
 
     // If there's an image, upload it to R2
     if (imageFile && imageFile.size > 0) {
       try {
-        console.log('Uploading image to R2...');
+        console.log("Uploading image to R2...");
         const r2 = createR2Client(c.env);
 
         // Generate unique key for the image
         const key = generateImageKey(createdTodo.id, imageFile.name);
-        
+
         // Upload image to R2
-        await uploadImage(r2, "ecomantem-todo-images", key, imageFile, imageFile.type);
-        console.log('Image uploaded successfully');
+        await uploadImage(
+          r2,
+          "ecomantem-todo-images",
+          key,
+          imageFile,
+          imageFile.type
+        );
+        console.log("Image uploaded successfully");
 
         // Generate signed URL
         const imageUrl = await getImageUrl(r2, "ecomantem-todo-images", key);
-        console.log('Generated image URL:', imageUrl);
+        console.log("Generated image URL:", imageUrl);
 
         // Update todo with image URL
         const updatedResult = await db
@@ -85,19 +108,76 @@ app.post("/api/todos/create-with-image", async (c) => {
           .where(eq(todo.id, createdTodo.id))
           .returning();
 
-        console.log('Todo updated with image URL');
+        console.log("Todo updated with image URL");
+
         return c.json(updatedResult[0]);
       } catch (error) {
-        console.error('Failed to upload image:', error);
+        console.error("Failed to upload image:", error);
         // Return the todo without image rather than failing completely
         return c.json(createdTodo);
       }
     }
 
+    try {
+      const env = c.env as Env;
+      await broadcastToAdminChat(env, `New todo created: "${text}"`);
+    } catch (error) {
+      console.error("Failed to broadcast todo creation:", error);
+    }
+
     return c.json(createdTodo);
   } catch (error) {
-    console.error('Error creating todo with image:', error);
-    return c.json({ error: 'Failed to create todo' }, 500);
+    console.error("Error creating todo with image:", error);
+    return c.json({ error: "Failed to create todo" }, 500);
+  }
+});
+
+// POST endpoint to broadcast messages to admin chat WebSocket
+app.post("/api/admin-chat/broadcast", async (c) => {
+  try {
+    // Validate session
+    /* const session = await auth.api.getSession(c.req.raw);
+    if (!session || !session.user) {
+      return c.json({ error: "Authentication required" }, 401);
+    }
+
+    // Verify user is admin
+    const userRecord = await db
+      .select()
+      .from(user)
+      .where(eq(user.id, session.user.id))
+      .limit(1);
+    if (!userRecord[0]?.isAdmin) {
+      return c.json({ error: "Admin access required" }, 403);
+    } */
+
+    // Parse the request body
+    const body = (await c.req.json()) as BroadcastMessageRequest;
+    const { message } = body;
+
+    if (
+      !message ||
+      typeof message !== "string" ||
+      message.trim().length === 0
+    ) {
+      return c.json(
+        {
+          error: "Message is required and must be a non-empty string",
+        } as ErrorResponse,
+        400
+      );
+    }
+
+    // Use the broadcast utility function
+    await broadcastToAdminChat(c.env, message);
+
+    return c.json({
+      success: true,
+      message: "Message broadcasted successfully",
+    } as BroadcastMessageResponse);
+  } catch (error) {
+    console.error("Error broadcasting message:", error);
+    return c.json({ error: "Internal server error" } as ErrorResponse, 500);
   }
 });
 

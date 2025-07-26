@@ -23,7 +23,7 @@ export const adminChatRouter = {
       const durableObject = env.ADMIN_CHAT.get(id);
 
       // Create WebSocket connection
-      const response = await durableObject.fetch(new Request("https://admin-chat/connect", {
+      const response = await durableObject.fetch(new Request(`${env.BETTER_AUTH_URL}/ws/admin-chat`, {
         headers: {
           "Upgrade": "websocket",
         },

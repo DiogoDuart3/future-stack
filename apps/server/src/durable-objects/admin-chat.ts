@@ -1,23 +1,10 @@
 import { db } from "@/db";
 import { adminChatMessages } from "@/db/schema/admin_chat_messages";
 import { eq, desc } from "drizzle-orm";
+import type { Env, ChatMessage, AuthenticatedWebSocket, UserInfo } from "../types/global";
 
-export interface Env {
+export interface DurableObjectEnv {
   ADMIN_CHAT: DurableObjectNamespace;
-}
-
-interface ChatMessage {
-  id: string;
-  userId: string;
-  userName: string;
-  message: string;
-  timestamp: number;
-}
-
-interface AuthenticatedWebSocket extends WebSocket {
-  userId?: string;
-  userName?: string;
-  userEmail?: string;
 }
 
 export class AdminChat {
@@ -26,7 +13,7 @@ export class AdminChat {
   private messages: ChatMessage[];
   private initialized: boolean = false;
 
-  constructor(state: DurableObjectState, env: Env) {
+  constructor(state: DurableObjectState, env: DurableObjectEnv) {
     this.state = state;
     this.sessions = new Set();
     this.messages = [];
@@ -34,7 +21,7 @@ export class AdminChat {
 
   private async initialize() {
     if (this.initialized) return;
-    
+
     try {
       // Load the last 100 messages from the database, ordered by creation time
       const dbMessages = await db
@@ -72,6 +59,24 @@ export class AdminChat {
     // Initialize messages from database on first request
     await this.initialize();
 
+    const { pathname } = new URL(request.url);
+    if (request.method === "POST" && pathname === "/api/admin-chat/send") {
+      const { message } = (await request.json()) as { message: string };
+
+      if (!message || message.trim().length === 0) {
+        return new Response("Message is required", { status: 400 });
+      }
+
+      await this.broadcast({
+        id: crypto.randomUUID(),
+        userId: "system",
+        userName: "System",
+        message,
+        timestamp: Date.now(),
+      });
+      return new Response(null, { status: 200 });
+    }
+
     // Extract validated user info from headers (set by the main worker)
     const userId = request.headers.get("x-user-id");
     const userName = request.headers.get("x-user-name");
@@ -98,7 +103,7 @@ export class AdminChat {
 
   async handleSession(
     webSocket: AuthenticatedWebSocket,
-    userInfo: { userId: string; userName: string; userEmail: string | null }
+    userInfo: UserInfo
   ) {
     webSocket.accept();
 
@@ -220,6 +225,18 @@ export class AdminChat {
 
     webSocket.addEventListener("error", () => {
       this.sessions.delete(webSocket);
+    });
+  }
+
+  async broadcast(message: ChatMessage) {
+    const messageData = JSON.stringify({
+      type: "message",
+      message,
+    });
+    this.sessions.forEach((session) => {
+      if (session.readyState === WebSocket.OPEN) {
+        session.send(messageData);
+      }
     });
   }
 }
