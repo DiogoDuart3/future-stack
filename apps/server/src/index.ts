@@ -10,7 +10,7 @@ import { AdminChat as AdminChatClass } from "./durable-objects/admin-chat";
 import { db } from "./db";
 import { user } from "./db/schema/auth";
 import { todo } from "./db/schema/todo";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import {
   createR2Client,
   uploadImage,
@@ -247,6 +247,92 @@ app.get("/ws/admin-chat", async (c) => {
   }
 });
 
+// Health check endpoint
+app.get("/api/health", async (c) => {
+  try {
+    const startTime = Date.now();
+    
+    // Check database connection
+    const dbCheck = await db.execute(sql`SELECT 1 as health_check`);
+    
+    // Check R2 connection (test bucket access)
+    let r2Check: { status: string; error?: string } = { status: "unknown" };
+    try {
+      const r2 = createR2Client(c.env);
+      // Test R2 access by trying to list objects in the bucket
+      const { ListObjectsV2Command } = await import("@aws-sdk/client-s3");
+      const command = new ListObjectsV2Command({
+        Bucket: "ecomantem-todo-images",
+        MaxKeys: 1
+      });
+      await r2.send(command);
+      r2Check = { status: "healthy" };
+    } catch (error) {
+      r2Check = { 
+        status: "unhealthy", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      };
+    }
+    
+    // Check Durable Objects (AdminChat)
+    let durableObjectCheck: { status: string; error?: string } = { status: "unknown" };
+    try {
+      const id = c.env.ADMIN_CHAT.idFromName("health-check");
+      const durableObject = c.env.ADMIN_CHAT.get(id);
+      durableObjectCheck = { status: "healthy" };
+    } catch (error) {
+      durableObjectCheck = { 
+        status: "unhealthy", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      };
+    }
+    
+    const responseTime = Date.now() - startTime;
+    
+    const healthStatus = {
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+      version: "1.0.0",
+      environment: c.env.NODE_ENV || "production",
+      uptime: process.uptime ? Math.floor(process.uptime()) : "unknown",
+      responseTime: `${responseTime}ms`,
+      checks: {
+        database: {
+          status: dbCheck ? "healthy" : "unhealthy",
+          responseTime: `${responseTime}ms`
+        },
+        storage: r2Check,
+        durableObjects: durableObjectCheck
+      }
+    };
+    
+    // Determine overall health status
+    const allChecksHealthy = healthStatus.checks.database.status === "healthy" && 
+                           healthStatus.checks.storage.status === "healthy" &&
+                           healthStatus.checks.durableObjects.status === "healthy";
+    
+    if (!allChecksHealthy) {
+      healthStatus.status = "degraded";
+      return c.json(healthStatus, 503);
+    }
+    
+    return c.json(healthStatus);
+  } catch (error) {
+    console.error("Health check failed:", error);
+    return c.json({
+      status: "unhealthy",
+      timestamp: new Date().toISOString(),
+      error: error instanceof Error ? error.message : "Unknown error",
+      checks: {
+        database: { status: "unhealthy", error: error instanceof Error ? error.message : "Unknown error" },
+        storage: { status: "unknown" },
+        durableObjects: { status: "unknown" }
+      }
+    }, 500);
+  }
+});
+
+// Simple health check for load balancers
 app.get("/", (c) => {
   return c.text("OK");
 });

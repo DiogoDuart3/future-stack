@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TodosOfflineRouteImport } from './routes/todos-offline'
 import { Route as TodosRouteImport } from './routes/todos'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as HealthRouteImport } from './routes/health'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AdminChatRouteImport } from './routes/admin-chat'
 import { Route as IndexRouteImport } from './routes/index'
@@ -29,6 +30,11 @@ const TodosRoute = TodosRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HealthRoute = HealthRouteImport.update({
+  id: '/health',
+  path: '/health',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin-chat': typeof AdminChatRoute
   '/dashboard': typeof DashboardRoute
+  '/health': typeof HealthRoute
   '/login': typeof LoginRoute
   '/todos': typeof TodosRoute
   '/todos-offline': typeof TodosOfflineRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin-chat': typeof AdminChatRoute
   '/dashboard': typeof DashboardRoute
+  '/health': typeof HealthRoute
   '/login': typeof LoginRoute
   '/todos': typeof TodosRoute
   '/todos-offline': typeof TodosOfflineRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin-chat': typeof AdminChatRoute
   '/dashboard': typeof DashboardRoute
+  '/health': typeof HealthRoute
   '/login': typeof LoginRoute
   '/todos': typeof TodosRoute
   '/todos-offline': typeof TodosOfflineRoute
@@ -78,6 +87,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin-chat'
     | '/dashboard'
+    | '/health'
     | '/login'
     | '/todos'
     | '/todos-offline'
@@ -86,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin-chat'
     | '/dashboard'
+    | '/health'
     | '/login'
     | '/todos'
     | '/todos-offline'
@@ -94,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin-chat'
     | '/dashboard'
+    | '/health'
     | '/login'
     | '/todos'
     | '/todos-offline'
@@ -103,6 +115,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminChatRoute: typeof AdminChatRoute
   DashboardRoute: typeof DashboardRoute
+  HealthRoute: typeof HealthRoute
   LoginRoute: typeof LoginRoute
   TodosRoute: typeof TodosRoute
   TodosOfflineRoute: typeof TodosOfflineRoute
@@ -129,6 +142,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/health': {
+      id: '/health'
+      path: '/health'
+      fullPath: '/health'
+      preLoaderRoute: typeof HealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -159,6 +179,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminChatRoute: AdminChatRoute,
   DashboardRoute: DashboardRoute,
+  HealthRoute: HealthRoute,
   LoginRoute: LoginRoute,
   TodosRoute: TodosRoute,
   TodosOfflineRoute: TodosOfflineRoute,

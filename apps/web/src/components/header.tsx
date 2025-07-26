@@ -22,6 +22,7 @@ export default function Header() {
     { to: "/dashboard", label: "Dashboard" },
     { to: "/todos", label: "Todos" },
     { to: "/todos-offline", label: "Offline Todos" },
+    { to: "/health", label: "Health" },
   ];
 
   const links = adminCheck.data?.isAdmin

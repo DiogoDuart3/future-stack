@@ -363,34 +363,141 @@ netlify rollback [deployment-id]
 
 #### Backend Health Endpoint
 
+The backend health endpoint is available at `/api/health` and provides comprehensive system status:
+
 ```typescript
-// Add to your server routes
-app.get('/health', async (c) => {
+// Health check endpoint
+app.get("/api/health", async (c) => {
   try {
+    const startTime = Date.now();
+    
     // Check database connection
-    await db.execute(sql`SELECT 1`);
+    const dbCheck = await db.execute(sql`SELECT 1 as health_check`);
     
-    // Check R2 connection
-    await TODO_IMAGES.list();
+    // Check R2 connection (test bucket access)
+    let r2Check: { status: string; error?: string } = { status: "unknown" };
+    try {
+      const r2 = createR2Client(c.env);
+      const { ListObjectsV2Command } = await import("@aws-sdk/client-s3");
+      const command = new ListObjectsV2Command({
+        Bucket: "ecomantem-todo-images",
+        MaxKeys: 1
+      });
+      await r2.send(command);
+      r2Check = { status: "healthy" };
+    } catch (error) {
+      r2Check = { 
+        status: "unhealthy", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      };
+    }
     
-    return c.json({ 
-      status: 'healthy',
+    // Check Durable Objects (AdminChat)
+    let durableObjectCheck: { status: string; error?: string } = { status: "unknown" };
+    try {
+      const id = c.env.ADMIN_CHAT.idFromName("health-check");
+      const durableObject = c.env.ADMIN_CHAT.get(id);
+      durableObjectCheck = { status: "healthy" };
+    } catch (error) {
+      durableObjectCheck = { 
+        status: "unhealthy", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      };
+    }
+    
+    const responseTime = Date.now() - startTime;
+    
+    const healthStatus = {
+      status: "healthy",
       timestamp: new Date().toISOString(),
-      version: process.env.VERSION || '1.0.0'
-    });
+      version: "1.0.0",
+      environment: c.env.NODE_ENV || "production",
+      uptime: process.uptime ? Math.floor(process.uptime()) : "unknown",
+      responseTime: `${responseTime}ms`,
+      checks: {
+        database: {
+          status: dbCheck ? "healthy" : "unhealthy",
+          responseTime: `${responseTime}ms`
+        },
+        storage: r2Check,
+        durableObjects: durableObjectCheck
+      }
+    };
+    
+    // Determine overall health status
+    const allChecksHealthy = healthStatus.checks.database.status === "healthy" && 
+                           healthStatus.checks.storage.status === "healthy" &&
+                           healthStatus.checks.durableObjects.status === "healthy";
+    
+    if (!allChecksHealthy) {
+      healthStatus.status = "degraded";
+      return c.json(healthStatus, 503);
+    }
+    
+    return c.json(healthStatus);
   } catch (error) {
-    return c.json({ 
-      status: 'unhealthy',
-      error: error.message 
+    console.error("Health check failed:", error);
+    return c.json({
+      status: "unhealthy",
+      timestamp: new Date().toISOString(),
+      error: error instanceof Error ? error.message : "Unknown error",
+      checks: {
+        database: { status: "unhealthy", error: error instanceof Error ? error.message : "Unknown error" },
+        storage: { status: "unknown" },
+        durableObjects: { status: "unknown" }
+      }
     }, 500);
   }
 });
 ```
 
+**Response Format:**
+```json
+{
+  "status": "healthy|degraded|unhealthy",
+  "timestamp": "2024-12-01T14:30:22.123Z",
+  "version": "1.0.0",
+  "environment": "production",
+  "uptime": "3600",
+  "responseTime": "45ms",
+  "checks": {
+    "database": {
+      "status": "healthy",
+      "responseTime": "45ms"
+    },
+    "storage": {
+      "status": "healthy"
+    },
+    "durableObjects": {
+      "status": "healthy"
+    }
+  }
+}
+```
+
 #### Frontend Health Check
 
+The frontend includes a comprehensive health monitoring page at `/health` that provides:
+
+1. **Real-time Backend Status**: Checks the backend health endpoint
+2. **Frontend Information**: Displays browser and connection information
+3. **Periodic Updates**: Automatically refreshes every 30 seconds
+4. **Visual Indicators**: Color-coded status badges and icons
+
+**Health Page Features:**
+- Overall system status with visual indicators
+- Detailed breakdown of each service (Database, Storage, Durable Objects)
+- System information (version, environment, uptime)
+- Frontend information (user agent, online status, connection type)
+- Manual refresh button
+- Error display with detailed messages
+
+**Usage:**
 ```typescript
-// Add to your frontend
+// Navigate to health page
+window.location.href = '/health';
+
+// Or programmatically check health
 const checkHealth = async () => {
   try {
     const response = await fetch('/api/health');
@@ -407,6 +514,9 @@ const checkHealth = async () => {
   }
 };
 ```
+
+**Health Page Route:**
+The health page is accessible via the navigation menu and provides a user-friendly interface for monitoring system health.
 
 ### Monitoring Setup
 
@@ -574,11 +684,29 @@ wrangler tail
 - [Vercel Deployment Guide](https://vercel.com/docs)
 - [Neon Database Documentation](https://neon.tech/docs)
 
+### Health Check Testing
+
+Test the health endpoints using the provided test script:
+
+```bash
+# Test health endpoints
+node test-health.js
+
+# Test with custom URLs
+BASE_URL=http://localhost:3000 WEB_URL=http://localhost:3001 node test-health.js
+```
+
+**Health Endpoints:**
+- **Backend Health**: `GET /api/health` - Comprehensive system status
+- **Simple Health**: `GET /` - Basic "OK" response for load balancers
+- **Frontend Health**: `/health` - User-friendly health monitoring page
+
 ### Tools
 - **Database**: Neon Console, Drizzle Studio
 - **Monitoring**: Cloudflare Analytics, Sentry
 - **Deployment**: Wrangler CLI, Vercel CLI
 - **Testing**: Playwright, Vitest
+- **Health Checks**: Built-in health endpoints and test script
 
 ### Support Channels
 - **Technical Issues**: GitHub Issues
