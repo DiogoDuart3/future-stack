@@ -81,7 +81,7 @@ function TodosRoute() {
         }
         
         // Send multipart request to our direct endpoint
-        const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/todos/create-with-image`, {
+        const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/todos/create-with-image`, {
           method: 'POST',
           body: formData,
           credentials: 'include', // Include cookies for auth

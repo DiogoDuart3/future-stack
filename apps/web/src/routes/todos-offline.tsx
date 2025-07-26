@@ -320,7 +320,7 @@ function OfflineTodosRoute() {
           }
 
           const response = await fetch(
-            `${import.meta.env.VITE_SERVER_URL}/api/todos/create-with-image`,
+            `${import.meta.env.VITE_SERVER_URL}/todos/create-with-image`,
             {
               method: "POST",
               body: formData,

@@ -38,10 +38,10 @@ app.use(
   })
 );
 
-app.on(["POST", "GET"], "/api/auth/**", (c) => auth.handler(c.req.raw));
+app.on(["POST", "GET"], "/auth/**", (c) => auth.handler(c.req.raw));
 
 // Direct HTTP endpoint for creating todos with images
-app.post("/api/todos/create-with-image", async (c) => {
+app.post("/todos/create-with-image", async (c) => {
   try {
     console.log("Creating todo with image via direct endpoint...");
 
@@ -133,7 +133,7 @@ app.post("/api/todos/create-with-image", async (c) => {
 });
 
 // POST endpoint to broadcast messages to admin chat WebSocket
-app.post("/api/admin-chat/broadcast", async (c) => {
+app.post("/admin-chat/broadcast", async (c) => {
   try {
     // Validate session
     /* const session = await auth.api.getSession(c.req.raw);
@@ -248,7 +248,7 @@ app.get("/ws/admin-chat", async (c) => {
 });
 
 // Health check endpoint
-app.get("/api/health", async (c) => {
+app.get("/health", async (c) => {
   try {
     const startTime = Date.now();
     

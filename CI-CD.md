@@ -363,11 +363,11 @@ netlify rollback [deployment-id]
 
 #### Backend Health Endpoint
 
-The backend health endpoint is available at `/api/health` and provides comprehensive system status:
+The backend health endpoint is available at `/health` and provides comprehensive system status:
 
 ```typescript
 // Health check endpoint
-app.get("/api/health", async (c) => {
+app.get("/health", async (c) => {
   try {
     const startTime = Date.now();
     
@@ -500,7 +500,7 @@ window.location.href = '/health';
 // Or programmatically check health
 const checkHealth = async () => {
   try {
-    const response = await fetch('/api/health');
+    const response = await fetch('/health');
     const data = await response.json();
     
     if (data.status !== 'healthy') {
@@ -697,7 +697,7 @@ BASE_URL=http://localhost:3000 WEB_URL=http://localhost:3001 node test-health.js
 ```
 
 **Health Endpoints:**
-- **Backend Health**: `GET /api/health` - Comprehensive system status
+- **Backend Health**: `GET /health` - Comprehensive system status
 - **Simple Health**: `GET /` - Basic "OK" response for load balancers
 - **Frontend Health**: `/health` - User-friendly health monitoring page
 

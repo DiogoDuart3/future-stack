@@ -79,7 +79,7 @@ async function processAction(action) {
         formData.append('image', action.data.image);
       }
 
-      const response = await fetch('/api/todos/create-with-image', {
+      const response = await fetch('/todos/create-with-image', {
         method: 'POST',
         body: formData,
         credentials: 'include',

@@ -43,7 +43,7 @@ function HealthPage() {
       setError(null);
       
       const startTime = Date.now();
-      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/health`);
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/health`);
       const responseTime = Date.now() - startTime;
       
       if (!response.ok) {

@@ -13,7 +13,7 @@ export async function broadcastToAdminChat(env: Env, message: string): Promise<v
     const durableObject = env.ADMIN_CHAT.get(id);
 
     // Create a request to the durable object's /send endpoint
-    const broadcastRequest = new Request(`${env.BETTER_AUTH_URL}/api/admin-chat/send`, {
+    const broadcastRequest = new Request(`${env.BETTER_AUTH_URL}/admin-chat/send`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

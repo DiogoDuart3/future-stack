@@ -60,7 +60,7 @@ export class AdminChat {
     await this.initialize();
 
     const { pathname } = new URL(request.url);
-    if (request.method === "POST" && pathname === "/api/admin-chat/send") {
+    if (request.method === "POST" && pathname === "/admin-chat/send") {
       const { message } = (await request.json()) as { message: string };
 
       if (!message || message.trim().length === 0) {

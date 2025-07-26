@@ -14,7 +14,7 @@ async function testBackendHealth() {
   console.log('🔍 Testing Backend Health...');
   
   try {
-    const response = await fetch(`${BASE_URL}/api/health`);
+    const response = await fetch(`${BASE_URL}/health`);
     const data = await response.json();
     
     console.log('✅ Backend Health Check Results:');
