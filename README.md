@@ -14,7 +14,7 @@ This project was created with [Better-T-Stack](https://github.com/AmanVarshney01
 - **Drizzle** - TypeScript-first ORM
 - **PostgreSQL** - Database engine
 - **Authentication** - Email & password authentication with Better Auth
-- **PWA** - Progressive Web App support
+- **PWA** - Progressive Web App support with installation prompts
 - **Turborepo** - Optimized monorepo build system
 
 ## Screenshots
@@ -84,3 +84,15 @@ future-stack/
 - `bun db:push`: Push schema changes to database
 - `bun db:studio`: Open database studio UI
 - `cd apps/web && bun generate-pwa-assets`: Generate PWA assets
+
+## PWA Installation
+
+The app includes a dedicated PWA installation page at `/install-pwa` that provides:
+
+- **Automatic Installation Detection** - Detects if the app is already installed
+- **Cross-Platform Support** - Works on iOS, Android, and Desktop browsers
+- **Installation Prompts** - Smart prompts that appear when the app can be installed
+- **Manual Instructions** - Step-by-step installation guides for different platforms
+- **Feature Showcase** - Highlights offline support, image handling, and native app features
+
+The PWA installation prompts also appear on the home page and offline todos page to encourage users to install the app for the best experience.

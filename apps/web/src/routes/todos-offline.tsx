@@ -23,6 +23,7 @@ import {
 import { useState, useRef, useEffect } from "react";
 import { orpc } from "@/utils/orpc";
 import { useQuery } from "@tanstack/react-query";
+import PWAInstallPrompt from "@/components/pwa-install-prompt";
 
 export const Route = createFileRoute("/todos-offline")({
   component: OfflineTodosRoute,
@@ -233,10 +234,10 @@ function OfflineTodosRoute() {
     const todo = todos.find((t) => t.id === todoId);
     if (!todo) return;
 
-    const updatedTodo = {
+    const updatedTodo: OfflineTodo = {
       ...todo,
       completed: !todo.completed,
-      status: isOnline ? "syncing" : ("pending" as const),
+      status: isOnline ? "syncing" : "pending",
     };
 
     setTodos((prev) => prev.map((t) => (t.id === todoId ? updatedTodo : t)));
@@ -470,6 +471,7 @@ function OfflineTodosRoute() {
 
   return (
     <div className="mx-auto w-full max-w-md py-10">
+      <PWAInstallPrompt variant="card" />
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">

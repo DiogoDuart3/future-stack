@@ -22,6 +22,7 @@ export default function Header() {
     { to: "/dashboard", label: "Dashboard" },
     { to: "/todos", label: "Todos" },
     { to: "/todos-offline", label: "Offline Todos" },
+    { to: "/install-pwa", label: "Install App" },
     { to: "/health", label: "Health" },
   ];
 
