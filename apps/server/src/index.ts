@@ -28,10 +28,15 @@ import type {
 const app = new Hono<{ Bindings: Env }>();
 
 app.use(logger());
+// Parse CORS_ORIGIN - support both single string and comma-separated list
+const corsOrigins = env.CORS_ORIGIN 
+  ? env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+  : [];
+
 app.use(
   "/*",
   cors({
-    origin: env.CORS_ORIGIN || "",
+    origin: corsOrigins.length > 0 ? corsOrigins : "*",
     allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     credentials: true,

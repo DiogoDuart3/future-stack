@@ -29,6 +29,7 @@
     "wrangler": "^4.23.0"
   },
   "dependencies": {
+    "@ecomantem/todos": "workspace:*",
     "@hookform/resolvers": "^5.1.1",
     "radix-ui": "^1.4.2",
     "@tanstack/react-form": "^1.12.3",

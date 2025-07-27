@@ -1,0 +1,50 @@
+{
+  "name": "@ecomantem/todos",
+  "version": "0.1.0",
+  "description": "Shared todos logic for Ecomantem applications",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "zod": "^3.22.0"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "@orpc/client": "^1.0.0",
+    "@orpc/tanstack-query": "^1.0.0",
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@tanstack/react-query": {
+      "optional": true
+    },
+    "@orpc/client": {
+      "optional": true
+    },
+    "@orpc/tanstack-query": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
+  }
+}

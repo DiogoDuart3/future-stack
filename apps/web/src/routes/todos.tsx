@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { createFileRoute } from "@tanstack/react-router";
 import { Loader2, Trash2, Upload, X } from "lucide-react";
 import { useState, useRef } from "react";
+import { validateFileSize, validateImageType } from "@ecomantem/todos";
 
 import { orpc } from "@/utils/orpc";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -43,6 +44,16 @@ function TodosRoute() {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate file type and size using shared utilities
+      if (!validateImageType(file)) {
+        alert('Please select a valid image file (JPEG, PNG, GIF, WebP)');
+        return;
+      }
+      if (!validateFileSize(file)) {
+        alert('File too large. Maximum size is 5MB.');
+        return;
+      }
+      
       setSelectedImage(file);
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -72,10 +83,7 @@ function TodosRoute() {
         formData.append('text', newTodoText.trim());
         
         if (selectedImage) {
-          // Check file size (limit to 5MB)
-          if (selectedImage.size > 5 * 1024 * 1024) {
-            throw new Error('File too large. Maximum size is 5MB.');
-          }
+          // File validation already done in handleImageSelect
           formData.append('image', selectedImage);
           console.log('Added image to form data:', selectedImage.name, selectedImage.size, 'bytes');
         }

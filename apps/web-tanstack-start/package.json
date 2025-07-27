@@ -1,21 +1,26 @@
 {
-  "name": "tanstack-start-example-basic",
+  "name": "web-tanstack-start",
   "private": true,
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
+    "dev": "vite dev --port=3002",
     "build": "vite build && tsc --noEmit",
     "start": "node .output/server/index.mjs"
   },
   "dependencies": {
+    "@ecomantem/todos": "workspace:*",
+    "@orpc/client": "^1.5.0",
+    "@orpc/tanstack-query": "^1.5.0",
+    "@tanstack/react-query": "^5.80.5",
     "@tanstack/react-router": "^1.130.1",
     "@tanstack/react-router-devtools": "^1.130.1",
     "@tanstack/react-start": "^1.130.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwind-merge": "^2.6.0",
-    "zod": "^3.24.2"
+    "zod": "^3.24.2",
+    "sonner": "^2.0.5"
   },
   "devDependencies": {
     "@types/node": "^22.5.4",
