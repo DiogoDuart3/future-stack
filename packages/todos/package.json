@@ -1,5 +1,5 @@
 {
-  "name": "@ecomantem/todos",
+  "name": "@future-stack/todos",
   "version": "0.1.0",
   "description": "Shared todos logic for Ecomantem applications",
   "main": "dist/index.js",

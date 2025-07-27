@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { createFileRoute } from "@tanstack/react-router";
 import { Loader2, Trash2, Upload, X } from "lucide-react";
 import { useState, useRef } from "react";
-import { validateFileSize, validateImageType } from "@ecomantem/todos";
+import { validateFileSize, validateImageType } from "@future-stack/todos";
 
 import { orpc } from "@/utils/orpc";
 import { useMutation, useQuery } from "@tanstack/react-query";

@@ -1,5 +1,5 @@
 {
-  "name": "@ecomantem/orpc-client",
+  "name": "@future-stack/orpc-client",
   "version": "0.1.0",
   "description": "Shared ORPC client for Ecomantem applications",
   "main": "dist/index.js",

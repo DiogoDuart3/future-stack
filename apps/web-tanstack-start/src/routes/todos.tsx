@@ -1,52 +1,19 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useRef } from 'react'
-import { QueryClientProvider, useMutation, useQuery } from '@tanstack/react-query'
-import { validateFileSize, validateImageType } from '@ecomantem/todos'
-import { createORPCClient } from "@orpc/client";
-import { RPCLink } from "@orpc/client/fetch";
-import { createTanstackQueryUtils } from "@orpc/tanstack-query";
-import { QueryCache, QueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { validateFileSize, validateImageType } from '@future-stack/todos'
 import { toast } from "sonner";
 
 export const Route = createFileRoute('/todos')({
+  loader: async ({ context }) => {
+    const todos = await context.orpc.todo.getAllWithImages.call();
+    return { todos };
+  },
   component: TodosRoute,
 })
 
-// Create the same ORPC setup as the main web app
-const queryClient = new QueryClient({
-  queryCache: new QueryCache({
-    onError: (error) => {
-      toast.error(`Error: ${error.message}`, {
-        action: {
-          label: "retry",
-          onClick: () => {
-            queryClient.invalidateQueries();
-          },
-        },
-      });
-    },
-  }),
-});
-
-const link = new RPCLink({
-  url: `${import.meta.env.VITE_SERVER_URL || 'http://localhost:3000'}/rpc`,
-  fetch(url, options) {
-    return fetch(url, {
-      ...options,
-      credentials: "include",
-    });
-  },
-});
-
-const client = createORPCClient(link);
-const orpc = createTanstackQueryUtils(client);
-
 function TodosRoute() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <TodosComponent />
-    </QueryClientProvider>
-  )
+  return <TodosComponent />
 }
 
 function TodosComponent() {
@@ -56,19 +23,26 @@ function TodosComponent() {
   const [isCreating, setIsCreating] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Use the same ORPC pattern as main web app
-  const todos = useQuery((orpc as any).todo.getAllWithImages.queryOptions())
+  // Get context and SSR data
+  const { orpc } = Route.useRouteContext()
+  const initialData = Route.useLoaderData()
+  
+  // Use context.orpc with SSR initial data
+  const todos = useQuery({
+    ...orpc.todo.getAllWithImages.queryOptions(),
+    initialData: initialData.todos,
+  }) as any
   
   const toggleMutation = useMutation(
-    (orpc as any).todo.toggle.mutationOptions({
+    orpc.todo.toggle.mutationOptions({
       onSuccess: () => { todos.refetch() },
-    }),
+    })
   )
   
   const deleteMutation = useMutation(
-    (orpc as any).todo.delete.mutationOptions({
+    orpc.todo.delete.mutationOptions({
       onSuccess: () => { todos.refetch() },
-    }),
+    })
   )
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -231,10 +205,10 @@ function TodosComponent() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
             <p className="mt-2 text-gray-600">Loading todos...</p>
           </div>
-        ) : todos.data?.length === 0 ? (
+        ) : (todos.data as any[])?.length === 0 ? (
           <p className="text-gray-500 italic text-center py-8">No todos yet. Add one above!</p>
         ) : (
-          todos.data?.map((todo: any) => (
+          (todos.data as any[])?.map((todo: any) => (
             <div
               key={todo.id}
               className="flex items-center gap-3 p-4 border border-gray-200 rounded-md hover:bg-gray-50"
@@ -275,11 +249,11 @@ function TodosComponent() {
         <ul className="text-sm space-y-1">
           <li>📡 Server URL: {import.meta.env.VITE_SERVER_URL || 'http://localhost:3000'}</li>
           <li>🔗 ORPC Endpoint: {import.meta.env.VITE_SERVER_URL || 'http://localhost:3000'}/rpc</li>
-          <li>📊 Total todos: {todos.data?.length || 0}</li>
-          <li>✅ Completed: {todos.data?.filter((t: any) => t.completed).length || 0}</li>
-          <li>⏳ Pending: {todos.data?.filter((t: any) => !t.completed).length || 0}</li>
+          <li>📊 Total todos: {(todos.data as any[])?.length || 0}</li>
+          <li>✅ Completed: {(todos.data as any[])?.filter((t: any) => t.completed).length || 0}</li>
+          <li>⏳ Pending: {(todos.data as any[])?.filter((t: any) => !t.completed).length || 0}</li>
           <li>🔄 Loading: {todos.isLoading ? 'Yes' : 'No'}</li>
-          {todos.error && <li>❌ Error: {(todos.error as Error).message}</li>}
+          {todos.error && <li>❌ Error: {todos.error instanceof Error ? todos.error.message : 'Unknown error'}</li>}
         </ul>
       </div>
     </div>

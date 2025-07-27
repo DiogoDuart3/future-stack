@@ -42,7 +42,7 @@ This starts the TanStack Start app (usually on `http://localhost:3000` or anothe
 - TanStack Start app: Uses manual ORPC calls with same endpoints
 - Both connect to `/rpc` endpoint on port 3000
 
-✅ **Shared Logic from `@ecomantem/todos`**
+✅ **Shared Logic from `@future-stack/todos`**
 - Types and validation (Zod schemas)
 - File validation (5MB limit, image types)  
 - Utility functions for file handling
@@ -91,4 +91,4 @@ packages/todos/
 │   └── index.ts       # Main exports
 ```
 
-Both apps import from `@ecomantem/todos` and get the same functionality with their own UI implementations.
+Both apps import from `@future-stack/todos` and get the same functionality with their own UI implementations.

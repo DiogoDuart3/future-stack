@@ -1,4 +1,4 @@
-# @ecomantem/todos
+# @future-stack/todos
 
 Shared todos logic package for Ecomantem web applications.
 
@@ -17,7 +17,7 @@ This package is automatically available in the monorepo workspace:
 ```json
 {
   "dependencies": {
-    "@ecomantem/todos": "workspace:*"
+    "@future-stack/todos": "workspace:*"
   }
 }
 ```
@@ -27,7 +27,7 @@ This package is automatically available in the monorepo workspace:
 ### Types
 
 ```typescript
-import { Todo, CreateTodoInput, OfflineTodo } from '@ecomantem/todos';
+import { Todo, CreateTodoInput, OfflineTodo } from '@future-stack/todos';
 
 const todo: Todo = {
   id: 1,
@@ -44,7 +44,7 @@ import {
   createTodoSchema,
   validateFileSize, 
   validateImageType 
-} from '@ecomantem/todos';
+} from '@future-stack/todos';
 
 // Validate todo input
 const input = createTodoSchema.parse({ text: "New todo" });
@@ -58,7 +58,7 @@ if (validateImageType(file) && validateFileSize(file)) {
 ### Storage (Offline Support)
 
 ```typescript
-import { TodoStorage, createOfflineTodo } from '@ecomantem/todos';
+import { TodoStorage, createOfflineTodo } from '@future-stack/todos';
 
 // Create and store offline todo
 const offlineTodo = createOfflineTodo("Offline task");
@@ -71,7 +71,7 @@ const todos = TodoStorage.getOfflineTodos();
 ### Utilities
 
 ```typescript
-import { fileToBase64, generateLocalId } from '@ecomantem/todos';
+import { fileToBase64, generateLocalId } from '@future-stack/todos';
 
 // Convert file to base64
 const base64 = await fileToBase64(imageFile);
@@ -83,7 +83,7 @@ const localId = generateLocalId();
 ### API Client
 
 ```typescript
-import { createBrowserTodosApi } from '@ecomantem/todos';
+import { createBrowserTodosApi } from '@future-stack/todos';
 
 // Create API client
 const api = createBrowserTodosApi('http://localhost:3000');
@@ -101,7 +101,7 @@ await api.delete({ id: 1 });
 import { 
   createBrowserTodosApi, 
   createTodosHooks 
-} from '@ecomantem/todos';
+} from '@future-stack/todos';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Setup

@@ -3,7 +3,7 @@ import {
   HeadContent,
   Link,
   Scripts,
-  createRootRoute,
+  createRootRouteWithContext,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import * as React from 'react'
@@ -12,8 +12,15 @@ import { NotFound } from '~/components/NotFound'
 import { Toaster } from '~/components/Toaster'
 import appCss from '~/styles/app.css?url'
 import { seo } from '~/utils/seo'
+import type { QueryClient } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 
-export const Route = createRootRoute({
+export interface RouterAppContext {
+  orpc: any;
+  queryClient: QueryClient;
+}
+
+export const Route = createRootRouteWithContext<RouterAppContext>()({
   head: () => ({
     meta: [
       {
@@ -131,7 +138,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
         <hr />
-        {children}
+        <QueryClientProvider client={Route.useRouteContext().queryClient}>
+          {children}
+        </QueryClientProvider>
         <Toaster />
         <TanStackRouterDevtools position="bottom-right" />
         <Scripts />
