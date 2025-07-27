@@ -63,7 +63,7 @@ function OfflineTodosRoute() {
 
   // Load server todos (when online)
   const serverTodos = useQuery({
-    ...orpc.todo.getAll.queryOptions(),
+    ...orpc.todo.getAllWithImages.queryOptions(),
     enabled: isOnline,
     refetchInterval: isOnline ? 30000 : false, // Refresh every 30s when online
   });
