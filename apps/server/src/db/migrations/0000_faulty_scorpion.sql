@@ -1,3 +1,13 @@
+CREATE TABLE "admin_chat_messages" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"message" text NOT NULL,
+	"user_id" text NOT NULL,
+	"user_name" text NOT NULL,
+	"user_email" text NOT NULL,
+	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "account" (
 	"id" text PRIMARY KEY NOT NULL,
 	"account_id" text NOT NULL,
@@ -51,7 +61,7 @@ CREATE TABLE "todo" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"text" text NOT NULL,
 	"completed" boolean DEFAULT false NOT NULL,
-	"image_url" text
+	"image_key" text
 );
 --> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

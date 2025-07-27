@@ -97,14 +97,13 @@ app.post("/todos/create-with-image", async (c) => {
         );
         console.log("Image uploaded successfully");
 
-        // Generate signed URL
-        const imageUrl = await getImageUrl(r2, "ecomantem-todo-images", key);
-        console.log("Generated image URL:", imageUrl);
+        // Store the R2 key in the imageUrl field (not a signed URL)
+        console.log("Generated image key:", key);
 
-        // Update todo with image URL
+        // Update todo with image key (stored as imageUrl)
         const updatedResult = await db
           .update(todo)
-          .set({ imageUrl })
+          .set({ imageUrl: key })
           .where(eq(todo.id, createdTodo.id))
           .returning();
 

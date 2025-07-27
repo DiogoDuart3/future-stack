@@ -27,7 +27,7 @@ function TodosRoute() {
   const [isCreating, setIsCreating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const todos = useQuery(orpc.todo.getAll.queryOptions());
+  const todos = useQuery(orpc.todo.getAllWithImages.queryOptions());
   // We're now using direct fetch instead of mutations for image upload
   const toggleMutation = useMutation(
     orpc.todo.toggle.mutationOptions({

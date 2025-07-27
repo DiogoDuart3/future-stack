@@ -46,13 +46,18 @@ export function generateImageKey(todoId: number, filename: string): string {
   return `todos/${todoId}/${timestamp}.${extension}`;
 }
 
-export async function getImageUrl(r2: S3Client, bucketName: string, key: string): Promise<string> {
+export async function getImageUrl(r2: S3Client, bucketName: string, key: string, expiresIn: number = 3600): Promise<string> {
   const command = new GetObjectCommand({
     Bucket: bucketName,
     Key: key,
   });
   
-  // Generate a signed URL that expires in 1 hour
-  const signedUrl = await getSignedUrl(r2, command, { expiresIn: 3600 });
+  // Generate a signed URL with configurable expiration
+  const signedUrl = await getSignedUrl(r2, command, { expiresIn });
   return signedUrl;
+}
+
+// New function to generate a fresh signed URL for an image key
+export async function generateFreshImageUrl(r2: S3Client, bucketName: string, key: string, expiresIn: number = 3600): Promise<string> {
+  return getImageUrl(r2, bucketName, key, expiresIn);
 }

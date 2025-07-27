@@ -3,13 +3,73 @@ import z from "zod";
 import { db } from "../db";
 import { todo } from "../db/schema/todo";
 import { publicProcedure } from "../lib/orpc";
-import { createR2Client, uploadImage, generateImageKey, getImageUrl } from "../lib/r2";
+import { createR2Client, uploadImage, generateImageKey, generateFreshImageUrl } from "../lib/r2";
 import { broadcastSystemNotification } from "../lib/broadcast";
 import type { Env } from "../types/global";
 
 export const todoRouter = {
   getAll: publicProcedure.handler(async () => {
     return await db.select().from(todo);
+  }),
+
+  getAllWithImages: publicProcedure.handler(async ({ context }) => {
+    try {
+      console.log('getAllWithImages called');
+      const todos = await db.select().from(todo);
+      console.log('Todos fetched:', todos.length);
+      
+      // Check if we have R2 credentials before trying to create client
+      const env = context.env as Env;
+      const hasR2Credentials = env.CLOUDFLARE_ACCOUNT_ID && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY;
+      
+      console.log('Environment check:', {
+        hasAccountId: !!env.CLOUDFLARE_ACCOUNT_ID,
+        hasAccessKey: !!env.R2_ACCESS_KEY_ID,
+        hasSecretKey: !!env.R2_SECRET_ACCESS_KEY,
+        hasR2Credentials
+      });
+      
+      if (!hasR2Credentials) {
+        console.log('No R2 credentials available, returning todos without image processing');
+        return todos;
+      }
+      
+      let r2;
+      try {
+        r2 = createR2Client(env);
+        console.log('R2 client created successfully');
+      } catch (error) {
+        console.error('Failed to create R2 client:', error);
+        return todos; // Return todos without image processing
+      }
+      
+      // Generate fresh signed URLs for todos with images
+      const todosWithImages = await Promise.all(
+        todos.map(async (todo) => {
+          if (todo.imageUrl && todo.imageUrl.startsWith('todos/')) {
+            try {
+              console.log(`Generating URL for todo ${todo.id} with key: ${todo.imageUrl}`);
+              // Generate fresh signed URL from the stored R2 key
+              const imageUrl = await generateFreshImageUrl(r2, "ecomantem-todo-images", todo.imageUrl);
+              console.log(`Generated URL for todo ${todo.id}: ${imageUrl.substring(0, 50)}...`);
+              return { ...todo, imageUrl };
+            } catch (error) {
+              console.error(`Failed to generate URL for todo ${todo.id}:`, error);
+              return { ...todo, imageUrl: null };
+            }
+          }
+          return todo; // Return as-is if no image or not an R2 key
+        })
+      );
+      
+      console.log('Returning todos with images:', todosWithImages.length);
+      return todosWithImages;
+    } catch (error) {
+      console.error('Error in getAllWithImages:', error);
+      // Fallback to regular getAll if there's an error
+      console.log('Falling back to regular getAll');
+      return await db.select().from(todo);
+    }
   }),
 
   create: publicProcedure
@@ -67,18 +127,15 @@ export const todoRouter = {
         await uploadImage(r2, "ecomantem-todo-images", key, fileBuffer, input.contentType);
         console.log('Image uploaded to R2 successfully');
         
-        const imageUrl = await getImageUrl(r2, "ecomantem-todo-images", key);
-        console.log('Generated image URL:', imageUrl);
-        
-        // Update the todo with the image URL
+        // Update the todo with the image key (stored as imageUrl)
         const updateResult = await db
           .update(todo)
-          .set({ imageUrl })
+          .set({ imageUrl: key })
           .where(eq(todo.id, input.todoId));
         
-        console.log('Todo updated with image URL:', updateResult);
+        console.log('Todo updated with image key:', updateResult);
         
-        return { imageUrl, key };
+        return { imageUrl: key };
       } catch (error) {
         console.error('Error in uploadImage handler:', error);
         throw error;
@@ -139,6 +196,31 @@ export const todoRouter = {
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error',
         message: 'R2 client creation failed'
+      };
+    }
+  }),
+
+  // Test getAllWithImages specifically
+  testGetAllWithImages: publicProcedure.handler(async ({ context }) => {
+    try {
+      console.log('Testing getAllWithImages...');
+      const todos = await db.select().from(todo);
+      console.log('Found todos:', todos.length);
+      
+      const env = context.env as Env;
+      const hasR2Credentials = env.CLOUDFLARE_ACCOUNT_ID && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY;
+      
+      return {
+        success: true,
+        todosCount: todos.length,
+        hasR2Credentials,
+        todosWithImages: todos.filter(t => t.imageUrl && t.imageUrl.startsWith('todos/')).length
+      };
+    } catch (error) {
+      console.error('testGetAllWithImages failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   }),
