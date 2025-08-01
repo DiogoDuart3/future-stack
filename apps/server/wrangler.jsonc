@@ -32,5 +32,8 @@
       "tag": "v1",
       "new_sqlite_classes": ["AdminChat"]
     }
-  ]
+  ],
+  "observability": {
+    "enabled": true
+  }
 }
