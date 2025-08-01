@@ -54,7 +54,7 @@ function AdminChatRoute() {
     console.log("Connecting to chat");
     console.log(adminCheck.data);
     console.log(session);
-    if (!adminCheck.data?.isAdmin || !session) {
+    if (!(adminCheck.data as { isAdmin: boolean })?.isAdmin || !session) {
       console.log("Not admin or not logged in");
       return;
     }
@@ -140,7 +140,7 @@ function AdminChatRoute() {
   }
 
   // Redirect non-admin users
-  if (!adminCheck.data?.isAdmin) {
+  if (!(adminCheck.data as { isAdmin: boolean })?.isAdmin) {
     return <Navigate to="/todos" />;
   }
 

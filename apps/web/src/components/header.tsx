@@ -26,7 +26,7 @@ export default function Header() {
     { to: "/health", label: "Health" },
   ];
 
-  const links = adminCheck.data?.isAdmin
+  const links = (adminCheck.data as { isAdmin: boolean })?.isAdmin
     ? [...baseLinks, { to: "/admin-chat", label: "Admin Chat" }]
     : baseLinks;
 

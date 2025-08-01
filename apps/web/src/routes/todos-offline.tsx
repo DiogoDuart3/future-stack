@@ -127,10 +127,8 @@ function OfflineTodosRoute() {
   useEffect(() => {
     if (serverTodos.data && isOnline) {
       setTodos((currentTodos) => {
-
-
         // Create server todos with proper typing
-        const serverTodosConverted = serverTodos.data.map((todo) => ({
+        const serverTodosConverted = (serverTodos.data as any[])?.map((todo: any) => ({
           id: todo.id.toString(),
           text: todo.text,
           completed: todo.completed,
@@ -141,7 +139,7 @@ function OfflineTodosRoute() {
         }));
 
         // Create a Set of server IDs for quick lookup
-        const serverIds = new Set(serverTodos.data.map((todo) => todo.id));
+        const serverIds = new Set((serverTodos.data as any[])?.map((todo: any) => todo.id));
 
         // Keep only local todos that:
         // 1. Are unsynced (pending/syncing/error) AND don't have a server match

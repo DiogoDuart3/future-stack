@@ -13,8 +13,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@server/*": ["../server/src/*"],
-      "@server/routers": ["../server/dist/src/routers/index"]
+      "@server/*": ["../server/src/*"]
     }
   },
   "references": [{
