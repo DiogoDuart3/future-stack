@@ -158,7 +158,7 @@ jobs:
         run: |
           echo "✅ Deployment completed successfully!"
           echo "🗄️ Database migrations applied"
-          echo "🔧 Server deployed to Cloudflare Workers"
+          echo "🔧 Server deployed to Cloudflare Workers (ecomantem-server)"
           echo "🌐 Web app deployed to Cloudflare Pages"
 
       - name: Notify deployment failure

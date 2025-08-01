@@ -14,7 +14,6 @@
     "deploy": "bun run build && wrangler pages deploy dist"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.9.0",
     "@tanstack/react-query-devtools": "^5.80.5",
     "@tanstack/react-router-devtools": "^1.114.27",
     "@tanstack/router-plugin": "^1.114.27",

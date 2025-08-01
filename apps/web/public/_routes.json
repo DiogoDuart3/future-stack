@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "include": ["/*"],
+  "exclude": [
+    "/api/*",
+    "/_assets/*",
+    "/_worker.js",
+    "/sw.js",
+    "/manifest.json"
+  ]
+} 
