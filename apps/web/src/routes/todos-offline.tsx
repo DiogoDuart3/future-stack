@@ -24,6 +24,7 @@ import { useState, useRef, useEffect } from "react";
 import { orpc } from "@/utils/orpc";
 import { useQuery } from "@tanstack/react-query";
 import PWAInstallPrompt from "@/components/pwa-install-prompt";
+import { useImageHandling } from "@/hooks/useImageHandling";
 
 export const Route = createFileRoute("/todos-offline")({
   component: OfflineTodosRoute,
@@ -54,12 +55,18 @@ interface QueuedAction {
 function OfflineTodosRoute() {
   const [todos, setTodos] = useState<OfflineTodo[]>([]);
   const [newTodoText, setNewTodoText] = useState("");
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncQueue, setSyncQueue] = useState<QueuedAction[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const { 
+    selectedImage, 
+    imagePreview, 
+    fileInputRef, 
+    handleImageSelect, 
+    handleRemoveImage, 
+    clearImage 
+  } = useImageHandling();
 
   // Load server todos (when online)
   const serverTodos = useQuery({
@@ -161,25 +168,7 @@ function OfflineTodosRoute() {
     }
   }, [isOnline, syncQueue.length, isSyncing]);
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedImage(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleRemoveImage = () => {
-    setSelectedImage(null);
-    setImagePreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
+  // Image handling is now provided by useImageHandling hook
 
   const generateLocalId = () =>
     `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -218,11 +207,7 @@ function OfflineTodosRoute() {
 
     // Clear form
     setNewTodoText("");
-    setSelectedImage(null);
-    setImagePreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    clearImage();
 
     // Try to sync immediately if online
     if (isOnline) {
@@ -308,29 +293,22 @@ function OfflineTodosRoute() {
 
       switch (action.type) {
         case "create":
-          const formData = new FormData();
-          formData.append("text", action.data.text);
-          if (action.data.imageData) {
-            // Convert base64 back to File for upload
-            const response = await fetch(action.data.imageData);
-            const blob = await response.blob();
-            const file = new File([blob], "image.jpg", {
-              type: blob.type || "image/jpeg",
-            });
-            formData.append("image", file);
-          }
-
-          const response = await fetch(
-            `${import.meta.env.VITE_SERVER_URL}/todos/create-with-image`,
-            {
-              method: "POST",
-              body: formData,
-              credentials: "include",
+          try {
+            // First, create the todo with text using ORPC
+            const todo = await orpc.todo.create.call({ text: action.data.text });
+            
+            // If there's an image, upload it using ORPC
+            if (action.data.imageData) {
+              // Convert base64 data URL back to base64 string
+              const base64Data = action.data.imageData.split(',')[1];
+              
+              await orpc.todo.uploadImage.call({
+                todoId: todo.id,
+                filename: "image.jpg",
+                contentType: "image/jpeg",
+                fileData: base64Data,
+              });
             }
-          );
-
-          if (response.ok) {
-            const serverTodo = await response.json();
 
             // Update local todo with server ID and mark as synced
             setTodos((prev) =>
@@ -339,9 +317,9 @@ function OfflineTodosRoute() {
                   ? {
                       ...t,
                       status: "synced",
-                      serverId: serverTodo.id,
-                      imageUrl: serverTodo.imageUrl,
-                      id: serverTodo.id.toString(), // Update the ID to match server
+                      serverId: todo.id,
+                      imageUrl: todo.imageUrl,
+                      id: todo.id.toString(), // Update the ID to match server
                     }
                   : t
               )
@@ -349,7 +327,7 @@ function OfflineTodosRoute() {
 
             // Remove from queue
             setSyncQueue((prev) => prev.filter((a) => a.id !== action.id));
-          } else {
+          } catch (error) {
             throw new Error("Failed to create todo");
           }
           break;

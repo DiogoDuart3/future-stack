@@ -11,10 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createFileRoute } from "@tanstack/react-router";
 import { Loader2, Trash2, Upload, X } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState } from "react";
 
 import { orpc } from "@/utils/orpc";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTodoMutations } from "@/hooks/useTodoMutations";
+import { useImageHandling } from "@/hooks/useImageHandling";
 
 export const Route = createFileRoute("/todos")({
   component: TodosRoute,
@@ -22,105 +24,50 @@ export const Route = createFileRoute("/todos")({
 
 function TodosRoute() {
   const [newTodoText, setNewTodoText] = useState("");
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
+  
   const todos = useQuery(orpc.todo.getAllWithImages.queryOptions());
-  // We're now using direct fetch instead of mutations for image upload
-  const toggleMutation = useMutation(
-    orpc.todo.toggle.mutationOptions({
-      onSuccess: () => { todos.refetch() },
-    }),
-  );
-  const deleteMutation = useMutation(
-    orpc.todo.delete.mutationOptions({
-      onSuccess: () => { todos.refetch() },
-    }),
-  );
-
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedImage(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleRemoveImage = () => {
-    setSelectedImage(null);
-    setImagePreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
+  const { createTodoMutation, toggleTodoMutation, deleteTodoMutation } = useTodoMutations();
+  const { 
+    selectedImage, 
+    imagePreview, 
+    fileInputRef, 
+    handleImageSelect, 
+    handleRemoveImage, 
+    clearImage 
+  } = useImageHandling();
 
   const handleAddTodo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newTodoText.trim() && !isCreating) {
-      setIsCreating(true);
+    if (newTodoText.trim() && !createTodoMutation.isPending) {
+      console.log('Creating todo with image:', { text: newTodoText, hasImage: !!selectedImage });
+      
       try {
-        console.log('Creating todo with image:', { text: newTodoText, hasImage: !!selectedImage });
-        
-        // Create FormData for multipart request
-        const formData = new FormData();
-        formData.append('text', newTodoText.trim());
-        
-        if (selectedImage) {
-          // Check file size (limit to 5MB)
-          if (selectedImage.size > 5 * 1024 * 1024) {
-            throw new Error('File too large. Maximum size is 5MB.');
-          }
-          formData.append('image', selectedImage);
-          console.log('Added image to form data:', selectedImage.name, selectedImage.size, 'bytes');
-        }
-        
-        // Send multipart request to our direct endpoint
-        const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/todos/create-with-image`, {
-          method: 'POST',
-          body: formData,
-          credentials: 'include', // Include cookies for auth
+        await createTodoMutation.mutateAsync({
+          text: newTodoText.trim(),
+          imageFile: selectedImage || undefined,
         });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to create todo');
-        }
-        
-        const result = await response.json();
-        console.log('Todo created successfully:', result);
-        
-        // Refresh todos list
-        todos.refetch();
         
         // Clear form after successful creation
         setNewTodoText("");
-        setSelectedImage(null);
-        setImagePreview(null);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
+        clearImage();
+        todos.refetch();
       } catch (error) {
         console.error('Failed to create todo:', error);
-        // You could show a toast notification here
         alert(error instanceof Error ? error.message : 'Failed to create todo');
-      } finally {
-        setIsCreating(false);
       }
     }
   };
 
   const handleToggleTodo = (id: number, completed: boolean) => {
-    toggleMutation.mutate({ id, completed: !completed });
+    toggleTodoMutation.mutate({ id, completed: !completed }, {
+      onSuccess: () => { todos.refetch() }
+    });
   };
 
   const handleDeleteTodo = (id: number) => {
-    deleteMutation.mutate({ id });
+    deleteTodoMutation.mutate({ id }, {
+      onSuccess: () => { todos.refetch() }
+    });
   };
 
   return (
@@ -137,13 +84,13 @@ function TodosRoute() {
                 value={newTodoText}
                 onChange={(e) => setNewTodoText(e.target.value)}
                 placeholder="Add a new task..."
-                disabled={isCreating}
+                disabled={createTodoMutation.isPending}
               />
               <Button
                 type="submit"
-                disabled={isCreating || !newTodoText.trim()}
+                disabled={createTodoMutation.isPending || !newTodoText.trim()}
               >
-                {isCreating ? (
+                {createTodoMutation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   "Add"
@@ -162,7 +109,7 @@ function TodosRoute() {
                   type="file"
                   accept="image/*"
                   onChange={handleImageSelect}
-                  disabled={isCreating}
+                  disabled={createTodoMutation.isPending}
                   className="flex-1"
                 />
                 <Button
@@ -170,7 +117,7 @@ function TodosRoute() {
                   variant="outline"
                   size="icon"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isCreating}
+                  disabled={createTodoMutation.isPending}
                 >
                   <Upload className="h-4 w-4" />
                 </Button>
