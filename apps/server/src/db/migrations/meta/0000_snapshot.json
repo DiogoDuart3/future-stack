@@ -1,5 +1,5 @@
 {
-  "id": "344c5677-c08c-4a97-a78c-204f871e503c",
+  "id": "cb91ee9b-092a-4a40-88af-cb1d9834b4ca",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -389,11 +389,18 @@
           "notNull": true,
           "default": false
         },
-        "image_key": {
-          "name": "image_key",
+        "image_url": {
+          "name": "image_url",
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {},

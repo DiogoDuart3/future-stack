@@ -1,1 +1,0 @@
-ALTER TABLE "todo" RENAME COLUMN "image_key" TO "image_url";
