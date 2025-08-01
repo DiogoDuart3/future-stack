@@ -11,7 +11,7 @@
     "check-types": "tsc --noEmit",
     "generate-pwa-assets": "pwa-assets-generator",
     "wrangler:dev": "wrangler dev --port=3001",
-    "deploy": "bun run build && wrangler deploy"
+    "deploy": "bun run build && wrangler pages deploy dist"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.9.0",
