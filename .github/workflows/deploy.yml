@@ -1,0 +1,151 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      build-cache-key: ${{ steps.cache-key.outputs.value }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Generate cache key
+        id: cache-key
+        run: echo "value=${{ github.sha }}-${{ github.run_id }}" >> $GITHUB_OUTPUT
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            .bun
+          key: deps-${{ runner.os }}-${{ hashFiles('**/package.json', '**/bun.lockb') }}
+          restore-keys: |
+            deps-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Check types
+        run: bun run check-types
+
+      - name: Build applications
+        run: bun run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            apps/web/dist
+            apps/server/dist
+
+  deploy-server:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Deploy server to Cloudflare Workers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          cd apps/server
+          bun run deploy
+
+      - name: Run database migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          cd apps/server
+          bun run db:migrate
+
+  deploy-web:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Deploy web app to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          cd apps/web
+          bun run deploy
+
+  notify:
+    needs: [deploy-server, deploy-web]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Notify deployment success
+        if: needs.deploy-server.result == 'success' && needs.deploy-web.result == 'success'
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo "🌐 Web app deployed to Cloudflare Pages"
+          echo "🔧 Server deployed to Cloudflare Workers"
+          echo "🗄️ Database migrations applied"
+
+      - name: Notify deployment failure
+        if: needs.deploy-server.result == 'failure' || needs.deploy-web.result == 'failure'
+        run: |
+          echo "❌ Deployment failed!"
+          echo "Server deployment status: ${{ needs.deploy-server.result }}"
+          echo "Web deployment status: ${{ needs.deploy-web.result }}"
+          echo "Please check the logs for more details." 

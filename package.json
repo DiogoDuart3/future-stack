@@ -15,7 +15,8 @@
     "db:push": "turbo -F server db:push",
     "db:studio": "turbo -F server db:studio",
     "db:generate": "turbo -F server db:generate",
-    "db:migrate": "turbo -F server db:migrate"
+    "db:migrate": "turbo -F server db:migrate",
+    "deploy:local": "./scripts/deploy-local.sh"
   },
   "devDependencies": {
     "turbo": "^2.5.4"
