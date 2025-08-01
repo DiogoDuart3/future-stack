@@ -11,12 +11,14 @@ export class AdminChat {
   private state: DurableObjectState;
   private sessions: Set<AuthenticatedWebSocket>;
   private messages: ChatMessage[];
+  private typingUsers: Set<string>; // Track users who are typing
   private initialized: boolean = false;
 
   constructor(state: DurableObjectState, env: DurableObjectEnv) {
     this.state = state;
     this.sessions = new Set();
     this.messages = [];
+    this.typingUsers = new Set();
   }
 
   private async initialize() {
@@ -136,6 +138,20 @@ export class AdminChat {
       })
     );
 
+    // Send current typing users to new connection
+    const typingUsers = Array.from(this.typingUsers);
+    const typingUserNames = Array.from(this.sessions)
+      .filter(session => typingUsers.includes(session.userId!))
+      .map(session => session.userName!)
+      .filter(Boolean);
+    
+    webSocket.send(
+      JSON.stringify({
+        type: "typing_users",
+        users: typingUserNames,
+      })
+    );
+
     // Send join notification to other users
     const joinMessage = {
       type: "user_joined",
@@ -159,6 +175,10 @@ export class AdminChat {
         const data = JSON.parse(event.data as string);
 
         if (data.type === "message") {
+          // Remove user from typing indicator when they send a message
+          this.typingUsers.delete(webSocket.userId!);
+          this.broadcastTypingUsers();
+
           // Use the server-validated user info, not client-provided data
           const message: ChatMessage = {
             id: crypto.randomUUID(),
@@ -208,6 +228,14 @@ export class AdminChat {
             createdAt: new Date(message.timestamp),
             updatedAt: new Date(message.timestamp),
           });
+        } else if (data.type === "typing_start") {
+          // Add user to typing indicator
+          this.typingUsers.add(webSocket.userId!);
+          this.broadcastTypingUsers();
+        } else if (data.type === "typing_stop") {
+          // Remove user from typing indicator
+          this.typingUsers.delete(webSocket.userId!);
+          this.broadcastTypingUsers();
         }
       } catch (err) {
         console.error("Error handling message:", err);
@@ -215,6 +243,10 @@ export class AdminChat {
     });
 
     webSocket.addEventListener("close", () => {
+      // Remove user from typing indicator when they disconnect
+      this.typingUsers.delete(webSocket.userId!);
+      this.broadcastTypingUsers();
+      
       this.sessions.delete(webSocket);
 
       // Send leave notification to other users
@@ -237,6 +269,10 @@ export class AdminChat {
     });
 
     webSocket.addEventListener("error", () => {
+      // Remove user from typing indicator when there's an error
+      this.typingUsers.delete(webSocket.userId!);
+      this.broadcastTypingUsers();
+      
       this.sessions.delete(webSocket);
     });
   }
@@ -249,6 +285,29 @@ export class AdminChat {
     this.sessions.forEach((session) => {
       if (session.readyState === WebSocket.OPEN) {
         session.send(messageData);
+      }
+    });
+  }
+
+  private broadcastTypingUsers() {
+    const typingUsers = Array.from(this.typingUsers);
+    const typingUserNames = Array.from(this.sessions)
+      .filter(session => typingUsers.includes(session.userId!))
+      .map(session => session.userName!)
+      .filter(Boolean);
+    
+    const typingData = JSON.stringify({
+      type: "typing_users",
+      users: typingUserNames,
+    });
+
+    this.sessions.forEach((session) => {
+      if (session.readyState === WebSocket.OPEN) {
+        try {
+          session.send(typingData);
+        } catch (err) {
+          this.sessions.delete(session);
+        }
       }
     });
   }

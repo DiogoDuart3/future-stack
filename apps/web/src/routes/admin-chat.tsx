@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { TypingIndicator } from "@/components/typing-indicator";
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import {
   Loader2,
@@ -32,9 +33,11 @@ function AdminChatRoute() {
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get user session
   const { data: session, isPending: isSessionPending } =
@@ -52,6 +55,33 @@ function AdminChatRoute() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const sendTypingEvent = (isTyping: boolean) => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+
+    const eventData = JSON.stringify({
+      type: isTyping ? "typing_start" : "typing_stop",
+    });
+
+    wsRef.current.send(eventData);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+
+    // Send typing start event
+    sendTypingEvent(true);
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Set timeout to stop typing indicator after 2 seconds of no input
+    typingTimeoutRef.current = setTimeout(() => {
+      sendTypingEvent(false);
+    }, 2000);
+  };
 
   const connectToChat = async () => {
     if (!session) {
@@ -116,6 +146,9 @@ function AdminChatRoute() {
         } else if (data.type === "online_users") {
           console.log("Received online users:", data.users);
           setOnlineUsers(data.users);
+        } else if (data.type === "typing_users") {
+          console.log("Received typing users:", data.users);
+          setTypingUsers(data.users);
         } else if (data.type === "user_joined") {
           setOnlineUsers((prev) => {
             if (!prev.includes(data.userName)) {
@@ -151,6 +184,9 @@ function AdminChatRoute() {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
       if (wsRef.current) {
         wsRef.current.close();
       }
@@ -170,6 +206,12 @@ function AdminChatRoute() {
       console.log("sendMessage early return");
       return;
     }
+
+    // Clear typing timeout and send stop typing event
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    sendTypingEvent(false);
 
     const messageData = JSON.stringify({
       type: "message",
@@ -281,6 +323,19 @@ function AdminChatRoute() {
                     </div>
                   ))
                 )}
+                
+                {/* Typing indicator */}
+                {typingUsers.length > 0 && (
+                  <div className="flex justify-start">
+                    <div className="max-w-xs lg:max-w-md px-4 py-2">
+                      <TypingIndicator 
+                        isTyping={true} 
+                        userName={typingUsers.length === 1 ? typingUsers[0] : undefined}
+                      />
+                    </div>
+                  </div>
+                )}
+                
                 <div ref={messagesEndRef} />
               </div>
 
@@ -289,7 +344,7 @@ function AdminChatRoute() {
                 <form onSubmit={sendMessage} className="flex space-x-3">
                   <Input
                     value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    onChange={handleInputChange}
                     placeholder="Type your message..."
                     disabled={!connected || connecting}
                     className="flex-1"
@@ -332,6 +387,11 @@ function AdminChatRoute() {
                     <div key={userName} className="flex items-center space-x-2">
                       <div className="h-2 w-2 rounded-full bg-green-500"></div>
                       <span className="text-sm">{userName}</span>
+                      {typingUsers.includes(userName) && (
+                        <span className="text-xs text-muted-foreground italic">
+                          typing...
+                        </span>
+                      )}
                     </div>
                   ))
                 )}
