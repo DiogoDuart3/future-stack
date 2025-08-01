@@ -4,7 +4,7 @@ import { db } from "../db";
 import * as schema from "../db/schema/auth";
 import { env } from "cloudflare:workers";
 
-export const auth = betterAuth({
+export const auth: ReturnType<typeof betterAuth> = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
 

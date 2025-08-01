@@ -2,7 +2,12 @@ import { protectedProcedure, publicProcedure } from "../lib/orpc";
 import { todoRouter } from "./todo";
 import { adminChatRouter } from "./admin-chat";
 
-export const appRouter = {
+export const appRouter: {
+  healthCheck: ReturnType<typeof publicProcedure.handler>;
+  privateData: ReturnType<typeof protectedProcedure.handler>;
+  todo: typeof todoRouter;
+  adminChat: typeof adminChatRouter;
+} = {
   healthCheck: publicProcedure.handler(() => {
     return "OK";
   }),

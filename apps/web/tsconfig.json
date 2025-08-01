@@ -12,7 +12,9 @@
     "rootDirs": ["."],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@server/*": ["../server/src/*"],
+      "@server/routers": ["../server/dist/src/routers/index"]
     }
   },
   "references": [{

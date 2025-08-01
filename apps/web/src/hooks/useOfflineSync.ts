@@ -124,10 +124,10 @@ export function useOfflineSync() {
     const todo = todos.find(t => t.id === todoId);
     if (!todo) return;
 
-    const updatedTodo = {
+    const updatedTodo: OfflineTodo = {
       ...todo,
       completed: !todo.completed,
-      status: isOnline ? 'syncing' : 'pending' as const,
+      status: isOnline ? 'syncing' : 'pending',
     };
 
     setTodos(prev => prev.map(t => t.id === todoId ? updatedTodo : t));
