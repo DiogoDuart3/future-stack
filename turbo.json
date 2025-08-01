@@ -7,11 +7,16 @@
 			"inputs": ["$TURBO_DEFAULT$", ".env*"],
 			"outputs": ["dist/**"]
 		},
+		"build:types": {
+			"dependsOn": ["^build:types"],
+			"inputs": ["$TURBO_DEFAULT$", ".env*"],
+			"outputs": ["dist/**"]
+		},
 		"lint": {
 			"dependsOn": ["^lint"]
 		},
 		"check-types": {
-			"dependsOn": ["^build", "^check-types"]
+			"dependsOn": ["^build:types", "^check-types"]
 		},
 		"dev": {
 			"cache": false,

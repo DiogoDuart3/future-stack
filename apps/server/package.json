@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "wrangler deploy --dry-run",
-    "check-types": "tsc --declaration --emitDeclarationOnly --outDir dist && tsc --noEmit --skipLibCheck",
+    "check-types": "tsc --noEmit --skipLibCheck",
+    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
     "dev": "wrangler dev --port=3008",
     "start": "wrangler dev",
