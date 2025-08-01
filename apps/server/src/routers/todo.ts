@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import z from "zod";
 import { db } from "../db";
 import { todo } from "../db/schema/todo";
@@ -15,7 +15,7 @@ export const todoRouter = {
   getAllWithImages: publicProcedure.handler(async ({ context }) => {
     try {
       console.log('getAllWithImages called');
-      const todos = await db.select().from(todo);
+      const todos = await db.select().from(todo).orderBy(desc(todo.createdAt));
       console.log('Todos fetched:', todos.length);
       
       // Check if we have R2 credentials before trying to create client

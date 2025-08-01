@@ -127,6 +127,8 @@ function OfflineTodosRoute() {
   useEffect(() => {
     if (serverTodos.data && isOnline) {
       setTodos((currentTodos) => {
+
+
         // Create server todos with proper typing
         const serverTodosConverted = serverTodos.data.map((todo) => ({
           id: todo.id.toString(),
@@ -141,20 +143,26 @@ function OfflineTodosRoute() {
         // Create a Set of server IDs for quick lookup
         const serverIds = new Set(serverTodos.data.map((todo) => todo.id));
 
-        // Keep only unsynced local todos that don't have a corresponding server todo
-        const unsyncedLocalTodos = currentTodos.filter((todo) => {
-          // Keep if it's pending/syncing/error and doesn't have a server ID
+        // Keep only local todos that:
+        // 1. Are unsynced (pending/syncing/error) AND don't have a server match
+        // 2. OR are synced but don't exist in server data (deleted on server)
+        const filteredLocalTodos = currentTodos.filter((todo) => {
           const isUnsynced =
             todo.status === "pending" ||
             todo.status === "syncing" ||
             todo.status === "error";
-          const hasNoServerMatch =
-            !todo.serverId || !serverIds.has(todo.serverId);
-          return isUnsynced && hasNoServerMatch;
+          
+          const hasServerMatch = todo.serverId && serverIds.has(todo.serverId);
+          
+          // Keep if unsynced and no server match, OR if synced but not in server (deleted)
+          // But don't keep local todos that have been successfully synced and exist on server
+          const shouldKeep = (isUnsynced && !hasServerMatch) || (todo.status === "synced" && !hasServerMatch);
+          
+          return shouldKeep;
         });
 
-        // Combine server todos with unsynced local todos
-        const mergedTodos = [...serverTodosConverted, ...unsyncedLocalTodos];
+        // Combine server todos with filtered local todos
+        const mergedTodos = [...serverTodosConverted, ...filteredLocalTodos];
 
         return mergedTodos.sort((a, b) => b.createdAt - a.createdAt);
       });
@@ -209,10 +217,7 @@ function OfflineTodosRoute() {
     setNewTodoText("");
     clearImage();
 
-    // Try to sync immediately if online
-    if (isOnline) {
-      await syncAction(queueAction);
-    }
+    // Auto-sync effect will handle the sync when online
   };
 
   const handleToggleTodo = async (todoId: string) => {
@@ -241,9 +246,7 @@ function OfflineTodosRoute() {
 
     setSyncQueue((prev) => [...prev, queueAction]);
 
-    if (isOnline) {
-      await syncAction(queueAction);
-    }
+    // Auto-sync effect will handle the sync when online
   };
 
   const handleDeleteTodo = async (todoId: string) => {
@@ -272,12 +275,7 @@ function OfflineTodosRoute() {
       console.log("Queueing delete action:", queueAction);
       setSyncQueue((prev) => [...prev, queueAction]);
 
-      if (isOnline) {
-        console.log("Online - attempting immediate sync");
-        await syncAction(queueAction);
-      } else {
-        console.log("Offline - action queued for later sync");
-      }
+      // Auto-sync effect will handle the sync when online
     } else {
       console.log("Todo has no serverId, skipping server deletion");
     }
@@ -319,7 +317,7 @@ function OfflineTodosRoute() {
                       status: "synced",
                       serverId: todo.id,
                       imageUrl: todo.imageUrl,
-                      id: todo.id.toString(), // Update the ID to match server
+                      // Keep the local ID, don't change it to server ID
                     }
                   : t
               )
