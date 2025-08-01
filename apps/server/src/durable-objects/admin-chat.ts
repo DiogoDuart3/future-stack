@@ -123,6 +123,19 @@ export class AdminChat {
       })
     );
 
+    // Send current online users to new connection
+    const onlineUsers = Array.from(this.sessions)
+      .filter(session => session.readyState === WebSocket.OPEN)
+      .map(session => session.userName)
+      .filter(Boolean);
+    
+    webSocket.send(
+      JSON.stringify({
+        type: "online_users",
+        users: onlineUsers,
+      })
+    );
+
     // Send join notification to other users
     const joinMessage = {
       type: "user_joined",

@@ -113,6 +113,9 @@ function AdminChatRoute() {
           setMessages(data.messages);
         } else if (data.type === "message") {
           setMessages((prev) => [...prev, data.message]);
+        } else if (data.type === "online_users") {
+          console.log("Received online users:", data.users);
+          setOnlineUsers(data.users);
         } else if (data.type === "user_joined") {
           setOnlineUsers((prev) => {
             if (!prev.includes(data.userName)) {
@@ -235,7 +238,7 @@ function AdminChatRoute() {
 
             <CardContent className="flex-1 flex flex-col p-0">
               {/* Messages area */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-[calc(100vh-20rem)]">
                 {messages.length === 0 ? (
                   <div className="text-center text-muted-foreground py-12">
                     <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
