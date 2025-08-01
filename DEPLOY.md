@@ -62,9 +62,6 @@ wrangler secret put BETTER_AUTH_URL
 wrangler secret put DATABASE_URL
 # Enter: Your production PostgreSQL connection string
 
-wrangler secret put DATABASE_URL_POOLER
-# Enter: Your pooled connection string (if different)
-
 # Set Cloudflare R2 secrets
 wrangler secret put CLOUDFLARE_ACCOUNT_ID
 # Enter: Your Cloudflare Account ID (found in dashboard sidebar)

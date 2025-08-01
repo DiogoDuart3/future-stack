@@ -9,7 +9,6 @@
 2. Create a new project
 3. Copy the connection strings:
    - `DATABASE_URL` - Direct connection string
-   - `DATABASE_URL_POOLER` - Pooled connection string (recommended for production)
 
 **Option B: Local PostgreSQL**
 ```bash
@@ -98,7 +97,6 @@ For Cloudflare Workers deployment:
    ```bash
    wrangler secret put BETTER_AUTH_SECRET
    wrangler secret put DATABASE_URL
-   wrangler secret put DATABASE_URL_POOLER
    wrangler secret put CLOUDFLARE_ACCOUNT_ID
    wrangler secret put R2_ACCESS_KEY_ID
    wrangler secret put R2_SECRET_ACCESS_KEY

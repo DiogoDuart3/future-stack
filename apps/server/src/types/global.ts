@@ -7,7 +7,6 @@ export interface Env extends CloudflareBindings {
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
   DATABASE_URL: string;
-  DATABASE_URL_POOLER: string;
   CLOUDFLARE_ACCOUNT_ID: string;
   R2_ACCESS_KEY_ID: string;
   R2_SECRET_ACCESS_KEY: string;
