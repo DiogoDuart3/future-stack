@@ -63,7 +63,7 @@ export class AdminChat {
       // Transform database records to ChatMessage format
       this.messages = dbMessages
         .reverse() // Reverse to get chronological order
-        .map((msg) => ({
+        .map((msg: typeof adminChatMessages.$inferSelect) => ({
           id: msg.id.toString(),
           userId: msg.userId,
           userName: msg.userName,

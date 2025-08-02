@@ -66,7 +66,7 @@ export class PublicChat {
       this.messages = await Promise.all(
         dbMessages
           .reverse() // Reverse to get chronological order
-          .map(async (msg: any) => {
+          .map(async (msg: typeof publicChatMessages.$inferSelect) => {
             let userProfilePictureUrl: string | undefined;
             
             if (msg.userProfilePicture) {
