@@ -26,13 +26,18 @@ function ProfilePage() {
 
     const loadUserProfile = async () => {
       try {
-        // const userProfile = await orpc.profile.getUserProfile.call({
-        //   userId: session.user.id,
-        // });
-        // return userProfile;
-        return null;
+        const userProfile = await orpc.profile.getUserProfile.call({
+          userId: session.user.id,
+        });
+        
+        if (userProfile?.profilePictureUrl) {
+          setProfilePictureUrl(userProfile.profilePictureUrl);
+        }
+        
+        return userProfile;
       } catch (error) {
         console.error('Error loading user profile:', error);
+        toast.error('Failed to load profile information');
       } finally {
         setIsLoadingProfile(false);
       }
@@ -41,7 +46,7 @@ function ProfilePage() {
     loadUserProfile();
   }, [session?.user?.id]);
 
-  if (isPending) {
+  if (isPending || isLoadingProfile) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="space-y-6">

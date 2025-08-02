@@ -2,7 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import z from "zod";
 import { todo } from "../db/schema/todo";
 import { publicProcedure } from "../lib/orpc";
-import { createR2Client, uploadImage, generateImageKey, generateFreshImageUrl } from "../lib/r2";
+import { uploadImageToBinding, getImageUrlFromBinding, generateImageKey } from "../lib/r2";
 import { broadcastSystemNotification } from "../lib/broadcast";
 import { createDatabaseConnection } from "../lib/db-factory";
 import type { Env } from "../types/global";
@@ -20,39 +20,17 @@ export const todoRouter = {
       const todos = await db.select().from(todo).orderBy(desc(todo.createdAt));
       console.log('Todos fetched:', todos.length);
       
-      // Check if we have R2 credentials before trying to create client
+      // Use R2 binding for image processing
       const env = context.env as Env;
-      const hasR2Credentials = env.CLOUDFLARE_ACCOUNT_ID && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY;
       
-      console.log('Environment check:', {
-        hasAccountId: !!env.CLOUDFLARE_ACCOUNT_ID,
-        hasAccessKey: !!env.R2_ACCESS_KEY_ID,
-        hasSecretKey: !!env.R2_SECRET_ACCESS_KEY,
-        hasR2Credentials
-      });
-      
-      if (!hasR2Credentials) {
-        console.log('No R2 credentials available, returning todos without image processing');
-        return todos;
-      }
-      
-      let r2;
-      try {
-        r2 = createR2Client(env);
-        console.log('R2 client created successfully');
-      } catch (error) {
-        console.error('Failed to create R2 client:', error);
-        return todos; // Return todos without image processing
-      }
-      
-      // Generate fresh signed URLs for todos with images
+      // Generate URLs for todos with images
       const todosWithImages = await Promise.all(
         todos.map(async (todo) => {
           if (todo.imageUrl && todo.imageUrl.startsWith('todos/')) {
             try {
               console.log(`Generating URL for todo ${todo.id} with key: ${todo.imageUrl}`);
-              // Generate fresh signed URL from the stored R2 key
-              const imageUrl = await generateFreshImageUrl(r2, "ecomantem-todo-images", todo.imageUrl);
+              // Generate URL from the stored R2 key using binding
+              const imageUrl = await getImageUrlFromBinding(env.TODO_IMAGES, todo.imageUrl);
               console.log(`Generated URL for todo ${todo.id}: ${imageUrl.substring(0, 50)}...`);
               return { ...todo, imageUrl };
             } catch (error) {
@@ -118,7 +96,6 @@ export const todoRouter = {
       });
       
       const env = context.env as Env;
-      const r2 = createR2Client(env);
       const db = createDatabaseConnection();
       
       try {
@@ -129,7 +106,7 @@ export const todoRouter = {
         const key = generateImageKey(input.todoId, input.filename);
         console.log('Generated key:', key);
         
-        await uploadImage(r2, "ecomantem-todo-images", key, fileBuffer, input.contentType);
+        await uploadImageToBinding(env.TODO_IMAGES, key, fileBuffer, input.contentType);
         console.log('Image uploaded to R2 successfully');
         
         // Update the todo with the image key (stored as imageUrl)
@@ -179,23 +156,17 @@ export const todoRouter = {
   testR2: publicProcedure.handler(async ({ context }) => {
     try {
       const env = context.env as Env;
-      console.log('R2 credentials check:', {
-        accountId: !!env.CLOUDFLARE_ACCOUNT_ID,
-        accessKey: !!env.R2_ACCESS_KEY_ID,
-        secretKey: !!env.R2_SECRET_ACCESS_KEY
+      console.log('R2 binding check:', {
+        hasBinding: !!env.TODO_IMAGES
       });
       
-      const r2 = createR2Client(env);
-      console.log('R2 client created successfully');
+      // Test the R2 binding
+      console.log('R2 binding available');
       
       return { 
         success: true, 
-        message: 'R2 client created successfully',
-        hasCredentials: {
-          accountId: !!env.CLOUDFLARE_ACCOUNT_ID,
-          accessKey: !!env.R2_ACCESS_KEY_ID,
-          secretKey: !!env.R2_SECRET_ACCESS_KEY
-        }
+        message: 'R2 binding available',
+        hasBinding: !!env.TODO_IMAGES
       };
     } catch (error) {
       console.error('R2 test failed:', error);

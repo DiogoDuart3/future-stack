@@ -3,7 +3,8 @@ import z from "zod";
 import { user } from "../db/schema/auth";
 import { publicProcedure } from "../lib/orpc";
 import { createDatabaseConnection } from "../lib/db-factory";
-import { createR2Client, uploadImage, getImageUrl } from "../lib/r2";
+import { uploadImageToBinding, getImageUrlFromBinding } from "../lib/r2";
+import type { Env } from "../types/global";
 
 export const profileRouter = {
   uploadProfilePicture: publicProcedure
@@ -14,8 +15,7 @@ export const profileRouter = {
       contentType: z.string(),
     }))
     .handler(async ({ input, context }) => {
-      const env = context.env;
-      const r2 = createR2Client(env);
+      const env = context.env as Env;
       const db = createDatabaseConnection();
       
       // Validate file type
@@ -37,8 +37,8 @@ export const profileRouter = {
         const extension = input.filename.split('.').pop() || 'jpg';
         const key = `profile-pictures/${input.userId}/${timestamp}.${extension}`;
         
-        // Upload to R2 using the existing TODO_IMAGES bucket
-        await uploadImage(r2, "ecomantem-todo-images", key, fileBuffer, input.contentType);
+        // Upload to R2 using the binding
+        await uploadImageToBinding(env.TODO_IMAGES, key, fileBuffer, input.contentType);
         
         // Update user record with the new profile picture key
         await db
@@ -49,8 +49,8 @@ export const profileRouter = {
           })
           .where(eq(user.id, input.userId));
         
-        // Generate signed URL for immediate access
-        const imageUrl = await getImageUrl(r2, "ecomantem-todo-images", key);
+        // Generate URL for immediate access
+        const imageUrl = await getImageUrlFromBinding(env.TODO_IMAGES, key);
         
         return { 
           success: true, 
@@ -68,8 +68,7 @@ export const profileRouter = {
       userId: z.string(),
     }))
     .handler(async ({ input, context }) => {
-      const env = context.env;
-      const r2 = createR2Client(env);
+      const env = context.env as Env;
       const db = createDatabaseConnection();
       
       // Get user's profile picture key
@@ -84,7 +83,7 @@ export const profileRouter = {
       }
       
       try {
-        const imageUrl = await getImageUrl(r2, "ecomantem-todo-images", userRecord[0].profilePicture);
+        const imageUrl = await getImageUrlFromBinding(env.TODO_IMAGES, userRecord[0].profilePicture);
         return { imageUrl };
       } catch (error) {
         console.error('Error generating profile picture URL:', error);
@@ -97,8 +96,7 @@ export const profileRouter = {
       userId: z.string(),
     }))
     .handler(async ({ input, context }) => {
-      const env = context.env;
-      const r2 = createR2Client(env);
+      const env = context.env as Env;
       const db = createDatabaseConnection();
       
       const userRecord = await db
@@ -118,11 +116,11 @@ export const profileRouter = {
         throw new Error('User not found');
       }
 
-      // Generate signed URL for profile picture if it exists
+      // Generate URL for profile picture if it exists
       let profilePictureUrl: string | null = null;
       if (userRecord[0].profilePicture) {
         try {
-          profilePictureUrl = await getImageUrl(r2, "ecomantem-todo-images", userRecord[0].profilePicture);
+          profilePictureUrl = await getImageUrlFromBinding(env.TODO_IMAGES, userRecord[0].profilePicture);
         } catch (error) {
           console.error('Error generating profile picture URL:', error);
         }
