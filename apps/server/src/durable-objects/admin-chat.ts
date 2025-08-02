@@ -8,13 +8,10 @@ import type { Env, ChatMessage, AuthenticatedWebSocket, UserInfo } from "../type
 
 export interface DurableObjectEnv {
   ADMIN_CHAT: DurableObjectNamespace;
-  DATABASE_URL?: string;
-  NODE_ENV?: string;
 }
 
 export class AdminChat {
   private state: DurableObjectState;
-  private env: DurableObjectEnv;
   private sessions: Set<AuthenticatedWebSocket>;
   private messages: ChatMessage[];
   private typingUsers: Set<string>; // Track users who are typing
@@ -23,25 +20,24 @@ export class AdminChat {
 
   constructor(state: DurableObjectState, env: DurableObjectEnv) {
     this.state = state;
-    this.env = env;
     this.sessions = new Set();
     this.messages = [];
     this.typingUsers = new Set();
-    
-    // Create database connection within this Durable Object context
-    this.initializeDatabase();
   }
 
-  private initializeDatabase() {
-    const isDevelopment = (this.env.NODE_ENV as string) === 'development';
+  private initializeDatabase(request: Request) {
+    const databaseUrl = request.headers.get("x-database-url") || "";
+    const nodeEnv = request.headers.get("x-node-env") || "";
+    
+    const isDevelopment = nodeEnv === 'development';
     
     if (isDevelopment) {
       // Use local PostgreSQL for development
-      const sql = postgres(this.env.DATABASE_URL || "postgresql://postgres:password@localhost:5432/ecomantem");
+      const sql = postgres(databaseUrl || "postgresql://postgres:password@localhost:5432/ecomantem");
       this.db = drizzlePostgres(sql);
     } else {
       // Use Neon for production
-      const sql = neon(this.env.DATABASE_URL || "");
+      const sql = neon(databaseUrl || "");
       this.db = drizzle(sql);
     }
   }
@@ -83,6 +79,9 @@ export class AdminChat {
   }
 
   async fetch(request: Request): Promise<Response> {
+    // Initialize database connection with request headers
+    this.initializeDatabase(request);
+    
     // Initialize messages from database on first request
     await this.initialize();
 

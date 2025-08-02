@@ -1,5 +1,5 @@
 import type { Context as HonoContext } from "hono";
-import { auth } from "./auth";
+import { createAuth } from "./auth";
 import type { Env } from "../types/global";
 
 export type CreateContextOptions = {
@@ -7,6 +7,7 @@ export type CreateContextOptions = {
 };
 
 export async function createContext({ context }: CreateContextOptions) {
+  const auth = createAuth();
   const session = await auth.api.getSession({
     headers: context.req.raw.headers,
   });

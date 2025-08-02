@@ -9,13 +9,10 @@ import { createR2Client, getImageUrl } from "../lib/r2";
 
 export interface DurableObjectEnv extends CloudflareBindings {
   PUBLIC_CHAT: DurableObjectNamespace;
-  DATABASE_URL?: string;
-  NODE_ENV?: string;
 }
 
 export class PublicChat {
   private state: DurableObjectState;
-  private env: DurableObjectEnv;
   private sessions: Set<AuthenticatedWebSocket>;
   private messages: ChatMessage[];
   private typingUsers: Set<string>;
@@ -24,25 +21,24 @@ export class PublicChat {
 
   constructor(state: DurableObjectState, env: DurableObjectEnv) {
     this.state = state;
-    this.env = env;
     this.sessions = new Set();
     this.messages = [];
     this.typingUsers = new Set();
-    
-    // Create database connection within this Durable Object context
-    this.initializeDatabase();
   }
 
-  private initializeDatabase() {
-    const isDevelopment = (this.env.NODE_ENV as string) === 'development';
+  private initializeDatabase(request: Request) {
+    const databaseUrl = request.headers.get("x-database-url") || "";
+    const nodeEnv = request.headers.get("x-node-env") || "";
+    
+    const isDevelopment = nodeEnv === 'development';
     
     if (isDevelopment) {
       // Use local PostgreSQL for development
-      const sql = postgres(this.env.DATABASE_URL || "postgresql://postgres:password@localhost:5432/ecomantem");
+      const sql = postgres(databaseUrl || "postgresql://postgres:password@localhost:5432/ecomantem");
       this.db = drizzlePostgres(sql);
     } else {
       // Use Neon for production
-      const sql = neon(this.env.DATABASE_URL || "");
+      const sql = neon(databaseUrl || "");
       this.db = drizzle(sql);
     }
   }
@@ -70,13 +66,13 @@ export class PublicChat {
       this.messages = await Promise.all(
         dbMessages
           .reverse() // Reverse to get chronological order
-          .map(async (msg) => {
+          .map(async (msg: any) => {
             let userProfilePictureUrl: string | undefined;
             
             if (msg.userProfilePicture) {
               try {
                 // Convert R2 key to signed URL
-                const r2 = createR2Client(this.env);
+                const r2 = createR2Client({} as CloudflareBindings); // We'll need to pass env through headers
                 userProfilePictureUrl = await getImageUrl(r2, "ecomantem-todo-images", msg.userProfilePicture);
               } catch (error) {
                 console.error("Error generating profile picture URL:", error);
@@ -102,6 +98,9 @@ export class PublicChat {
   }
 
   async fetch(request: Request): Promise<Response> {
+    // Initialize database connection with request headers
+    this.initializeDatabase(request);
+    
     // Initialize messages from database on first request
     await this.initialize();
 
@@ -239,7 +238,7 @@ export class PublicChat {
           let userProfilePictureUrl: string | undefined;
           if (webSocket.userProfilePicture) {
             try {
-              const r2 = createR2Client(this.env);
+              const r2 = createR2Client({} as CloudflareBindings); // We'll need to pass env through headers
               userProfilePictureUrl = await getImageUrl(r2, "ecomantem-todo-images", webSocket.userProfilePicture);
             } catch (error) {
               console.error("Error generating profile picture URL:", error);

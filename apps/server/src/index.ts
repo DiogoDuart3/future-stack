@@ -229,10 +229,7 @@ app.get("/ws/admin-chat", async (c) => {
 
     // Get Durable Object instance and pass validated user info
     const id = c.env.ADMIN_CHAT.idFromName("admin-chat-room");
-    const durableObject = c.env.ADMIN_CHAT.get(id, {
-      DATABASE_URL: c.env.DATABASE_URL,
-      NODE_ENV: c.env.NODE_ENV,
-    });
+    const durableObject = c.env.ADMIN_CHAT.get(id);
 
     // Create new request with user info in headers
     const wsRequest = new Request(c.req.raw.url, {
@@ -242,6 +239,8 @@ app.get("/ws/admin-chat", async (c) => {
         "x-user-id": session.user.id,
         "x-user-name": session.user.name || "Admin User",
         "x-user-email": session.user.email || "",
+        "x-database-url": c.env.DATABASE_URL || "",
+        "x-node-env": c.env.NODE_ENV || "",
       },
     });
 
@@ -309,10 +308,7 @@ app.get("/ws/public-chat", async (c) => {
 
   // Get Durable Object instance and pass user info in headers
   const id = c.env.PUBLIC_CHAT.idFromName("public-chat-room");
-  const durableObject = c.env.PUBLIC_CHAT.get(id, {
-    DATABASE_URL: c.env.DATABASE_URL,
-    NODE_ENV: c.env.NODE_ENV,
-  });
+  const durableObject = c.env.PUBLIC_CHAT.get(id);
 
   // Create new request with user info in headers
   const wsRequest = new Request(c.req.raw.url, {
@@ -324,6 +320,8 @@ app.get("/ws/public-chat", async (c) => {
       "x-user-email": userInfo.userEmail,
       "x-user-profile-picture": userInfo.userProfilePicture,
       "x-is-guest": isGuest.toString(),
+      "x-database-url": c.env.DATABASE_URL || "",
+      "x-node-env": c.env.NODE_ENV || "",
     },
   });
 
