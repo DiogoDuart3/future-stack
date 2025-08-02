@@ -6,8 +6,8 @@ import { auth } from "./lib/auth";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { AdminChat as AdminChatClass } from "./durable-objects/admin-chat";
-import { PublicChat as PublicChatClass } from "./durable-objects/public-chat";
+import { AdminChat } from "./durable-objects/admin-chat";
+import { PublicChat } from "./durable-objects/public-chat";
 import { db } from "./db";
 import { user } from "./db/schema/auth";
 import { todo } from "./db/schema/todo";
@@ -416,5 +416,4 @@ app.get("/", (c) => {
 export default app;
 
 // Export the Durable Object classes
-export const AdminChat = AdminChatClass;
-export const PublicChat = PublicChatClass;
+export { AdminChat, PublicChat };
