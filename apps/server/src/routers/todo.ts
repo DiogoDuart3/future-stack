@@ -30,7 +30,8 @@ export const todoRouter = {
             try {
               console.log(`Generating URL for todo ${todo.id} with key: ${todo.imageUrl}`);
               // Generate URL from the stored R2 key using binding
-              const imageUrl = await getImageUrlFromBinding(env.TODO_IMAGES, todo.imageUrl);
+              const serverUrl = context.req?.url ? new URL(context.req.url).origin : 'http://localhost:8787';
+              const imageUrl = `${serverUrl}/api/images/${todo.imageUrl}`;
               console.log(`Generated URL for todo ${todo.id}: ${imageUrl.substring(0, 50)}...`);
               return { ...todo, imageUrl };
             } catch (error) {

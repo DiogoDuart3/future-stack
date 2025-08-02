@@ -50,7 +50,8 @@ export const profileRouter = {
           .where(eq(user.id, input.userId));
         
         // Generate URL for immediate access
-        const imageUrl = await getImageUrlFromBinding(env.TODO_IMAGES, key);
+        const serverUrl = context.req?.url ? new URL(context.req.url).origin : 'http://localhost:8787';
+        const imageUrl = `${serverUrl}/api/images/${key}`;
         
         return { 
           success: true, 
@@ -83,7 +84,8 @@ export const profileRouter = {
       }
       
       try {
-        const imageUrl = await getImageUrlFromBinding(env.TODO_IMAGES, userRecord[0].profilePicture);
+        const serverUrl = context.req?.url ? new URL(context.req.url).origin : 'http://localhost:8787';
+        const imageUrl = `${serverUrl}/api/images/${userRecord[0].profilePicture}`;
         return { imageUrl };
       } catch (error) {
         console.error('Error generating profile picture URL:', error);
@@ -120,7 +122,8 @@ export const profileRouter = {
       let profilePictureUrl: string | null = null;
       if (userRecord[0].profilePicture) {
         try {
-          profilePictureUrl = await getImageUrlFromBinding(env.TODO_IMAGES, userRecord[0].profilePicture);
+          const serverUrl = context.req?.url ? new URL(context.req.url).origin : 'http://localhost:8787';
+          profilePictureUrl = `${serverUrl}/api/images/${userRecord[0].profilePicture}`;
         } catch (error) {
           console.error('Error generating profile picture URL:', error);
         }

@@ -1,6 +1,5 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import type { R2Bucket } from "@cloudflare/workers-types";
 
 export function createR2Client(env: { CLOUDFLARE_ACCOUNT_ID: string; R2_ACCESS_KEY_ID: string; R2_SECRET_ACCESS_KEY: string }) {
   return new S3Client({
@@ -15,7 +14,7 @@ export function createR2Client(env: { CLOUDFLARE_ACCOUNT_ID: string; R2_ACCESS_K
 
 // New functions using R2 binding directly (recommended for Cloudflare Workers)
 export async function uploadImageToBinding(
-  r2Bucket: R2Bucket,
+  r2Bucket: any, // R2Bucket type
   key: string,
   file: File | ArrayBuffer | Uint8Array,
   contentType: string
@@ -40,15 +39,23 @@ export async function uploadImageToBinding(
 }
 
 export async function getImageUrlFromBinding(
-  r2Bucket: R2Bucket, 
+  r2Bucket: any, // R2Bucket type
   key: string, 
   expiresIn: number = 3600
 ): Promise<string> {
   try {
-    // For now, return a direct URL - this requires the bucket to be public
-    // In production, you should implement proper signed URL generation
-    // or use a custom domain with proper authentication
-    return `https://ecomantem-todo-images.r2.cloudflarestorage.com/${key}`;
+    // Check if the object exists
+    const object = await r2Bucket.get(key);
+    
+    if (!object) {
+      throw new Error(`Object not found: ${key}`);
+    }
+    
+    // Return a URL that will be served through the Worker
+    // This avoids the SSL issues with direct R2 URLs
+    // The server URL should be configured in the environment
+    const serverUrl = process.env.VITE_SERVER_URL || 'http://localhost:8787';
+    return `${serverUrl}/api/images/${key}`;
   } catch (error) {
     console.error('Error getting image URL from binding:', error);
     throw error;

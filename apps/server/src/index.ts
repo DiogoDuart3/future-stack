@@ -310,20 +310,21 @@ app.get("/ws/public-chat", async (c) => {
   const id = c.env.PUBLIC_CHAT.idFromName("public-chat-room");
   const durableObject = c.env.PUBLIC_CHAT.get(id);
 
-  // Create new request with user info in headers
-  const wsRequest = new Request(c.req.raw.url, {
-    method: c.req.raw.method,
-    headers: {
-      ...Object.fromEntries(c.req.raw.headers.entries()),
-      "x-user-id": userInfo.userId,
-      "x-user-name": userInfo.userName,
-      "x-user-email": userInfo.userEmail,
-      "x-user-profile-picture": userInfo.userProfilePicture,
-      "x-is-guest": isGuest.toString(),
-      "x-database-url": c.env.DATABASE_URL || "",
-      "x-node-env": c.env.NODE_ENV || "",
-    },
-  });
+      // Create new request with user info in headers
+    const wsRequest = new Request(c.req.raw.url, {
+      method: c.req.raw.method,
+      headers: {
+        ...Object.fromEntries(c.req.raw.headers.entries()),
+        "x-user-id": userInfo.userId,
+        "x-user-name": userInfo.userName,
+        "x-user-email": userInfo.userEmail,
+        "x-user-profile-picture": userInfo.userProfilePicture,
+        "x-is-guest": isGuest.toString(),
+        "x-database-url": c.env.DATABASE_URL || "",
+        "x-node-env": c.env.NODE_ENV || "",
+        "x-server-url": new URL(c.req.raw.url).origin,
+      },
+    });
 
   return durableObject.fetch(wsRequest);
 });
@@ -413,6 +414,37 @@ app.get("/health", async (c) => {
         durableObjects: { status: "unknown" }
       }
     }, 500);
+  }
+});
+
+// Image serving endpoint
+app.get("/api/images/*", async (c) => {
+  try {
+    const path = c.req.path.replace("/api/images/", "");
+    
+    if (!path) {
+      return c.json({ error: "Image path required" }, 400);
+    }
+    
+    // Get the image from R2
+    const object = await c.env.TODO_IMAGES.get(path);
+    
+    if (!object) {
+      return c.json({ error: "Image not found" }, 404);
+    }
+    
+    // Get the object's metadata
+    const headers = new Headers();
+    headers.set("Content-Type", object.httpMetadata?.contentType || "image/jpeg");
+    headers.set("Cache-Control", "public, max-age=31536000"); // Cache for 1 year
+    headers.set("Access-Control-Allow-Origin", "*");
+    
+    return new Response(object.body, {
+      headers,
+    });
+  } catch (error) {
+    console.error("Error serving image:", error);
+    return c.json({ error: "Failed to serve image" }, 500);
   }
 });
 

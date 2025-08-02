@@ -43,7 +43,7 @@ export class PublicChat {
     }
   }
 
-  private async initialize() {
+  private async initialize(request?: Request) {
     if (this.initialized) return;
 
     try {
@@ -69,11 +69,11 @@ export class PublicChat {
           .map(async (msg: typeof publicChatMessages.$inferSelect) => {
             let userProfilePictureUrl: string | undefined;
             
-            if (msg.userProfilePicture) {
+            if (msg.userProfilePicture && request) {
               try {
-                // Convert R2 key to signed URL
-                const r2 = createR2Client({} as CloudflareBindings); // We'll need to pass env through headers
-                userProfilePictureUrl = await getImageUrl(r2, "ecomantem-todo-images", msg.userProfilePicture);
+                // Get server URL from headers and construct image URL
+                const serverUrl = request.headers.get("x-server-url") || "http://localhost:8787";
+                userProfilePictureUrl = `${serverUrl}/api/images/${msg.userProfilePicture}`;
               } catch (error) {
                 console.error("Error generating profile picture URL:", error);
               }
@@ -102,7 +102,7 @@ export class PublicChat {
     this.initializeDatabase(request);
     
     // Initialize messages from database on first request
-    await this.initialize();
+    await this.initialize(request);
 
     const { pathname } = new URL(request.url);
     if (request.method === "POST" && pathname === "/public-chat/send") {
@@ -142,7 +142,7 @@ export class PublicChat {
       userEmail,
       userProfilePicture: userProfilePicture || undefined,
       isGuest,
-    });
+    }, request);
 
     return new Response(null, {
       status: 101,
@@ -152,7 +152,8 @@ export class PublicChat {
 
   async handleSession(
     webSocket: AuthenticatedWebSocket,
-    userInfo: UserInfo & { userProfilePicture?: string; isGuest?: boolean }
+    userInfo: UserInfo & { userProfilePicture?: string; isGuest?: boolean },
+    request?: Request
   ) {
     webSocket.accept();
 
@@ -162,6 +163,9 @@ export class PublicChat {
     webSocket.userEmail = userInfo.userEmail || "";
     webSocket.userProfilePicture = userInfo.userProfilePicture || "";
     (webSocket as any).isGuest = userInfo.isGuest || false;
+    
+    // Store server URL for image URL generation
+    (webSocket as any).serverUrl = request?.headers.get("x-server-url") || "http://localhost:8787";
 
     this.sessions.add(webSocket);
 
@@ -238,8 +242,9 @@ export class PublicChat {
           let userProfilePictureUrl: string | undefined;
           if (webSocket.userProfilePicture) {
             try {
-              const r2 = createR2Client({} as CloudflareBindings); // We'll need to pass env through headers
-              userProfilePictureUrl = await getImageUrl(r2, "ecomantem-todo-images", webSocket.userProfilePicture);
+              // Get server URL from the stored WebSocket data
+              const serverUrl = (webSocket as any).serverUrl || "http://localhost:8787";
+              userProfilePictureUrl = `${serverUrl}/api/images/${webSocket.userProfilePicture}`;
             } catch (error) {
               console.error("Error generating profile picture URL:", error);
             }

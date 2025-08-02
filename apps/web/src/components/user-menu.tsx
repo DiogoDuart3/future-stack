@@ -25,11 +25,10 @@ export default function UserMenu() {
 
     const loadProfilePicture = async () => {
       try {
-        // const result = await orpc.profile.getProfilePictureUrl.call({
-        //   userId: user.id,
-        // });
-        // return result?.imageUrl || null;
-        return null;
+        const result = await orpc.profile.getProfilePictureUrl.call({
+          userId: session.user.id,
+        });
+        setProfilePictureUrl(result?.imageUrl || null);
       } catch (error) {
         console.error('Error loading profile picture:', error);
       }
