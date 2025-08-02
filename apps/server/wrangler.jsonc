@@ -22,20 +22,21 @@
     "bindings": [
       {
         "name": "ADMIN_CHAT",
-        "class_name": "AdminChat",
-        "script_name": "ecomantem-server"
+        "class_name": "AdminChat"
       },
       {
         "name": "PUBLIC_CHAT",
-        "class_name": "PublicChat",
-        "script_name": "ecomantem-server"
+        "class_name": "PublicChat"
       }
     ]
   },
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["AdminChat", "PublicChat"]
+      "new_sqlite_classes": ["AdminChat"]
+    }, {
+      "tag": "v2",
+      "new_sqlite_classes": ["PublicChat"]
     }
   ],
   "observability": {
