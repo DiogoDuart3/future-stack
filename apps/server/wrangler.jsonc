@@ -5,7 +5,8 @@
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "NODE_ENV": "production",
-    "CORS_ORIGIN": "https://ecomantem.diogodev.com"
+    "CORS_ORIGIN": "https://ecomantem.diogodev.com",
+    "DATABASE_URL": ""
     // Add public environment variables here
     // Example: "CORS_ORIGIN": "https://your-domain.com",
   },

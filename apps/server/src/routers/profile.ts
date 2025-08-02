@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
 import z from "zod";
-import { db } from "../db";
 import { user } from "../db/schema/auth";
 import { publicProcedure } from "../lib/orpc";
 import { createR2Client, uploadImage, getImageUrl } from "../lib/r2";
+import { createDatabaseConnection } from "../lib/db-factory";
 
 export const profileRouter = {
   uploadProfilePicture: publicProcedure
@@ -16,6 +16,7 @@ export const profileRouter = {
     .handler(async ({ input, context }) => {
       const env = context.env as CloudflareBindings;
       const r2 = createR2Client(env);
+      const db = createDatabaseConnection(context.env);
       
       // Validate file type
       if (!input.contentType.startsWith('image/')) {
@@ -69,6 +70,7 @@ export const profileRouter = {
     .handler(async ({ input, context }) => {
       const env = context.env as CloudflareBindings;
       const r2 = createR2Client(env);
+      const db = createDatabaseConnection(context.env);
       
       // Get user's profile picture key
       const userRecord = await db
@@ -97,6 +99,7 @@ export const profileRouter = {
     .handler(async ({ input, context }) => {
       const env = context.env as CloudflareBindings;
       const r2 = createR2Client(env);
+      const db = createDatabaseConnection(context.env);
       
       const userRecord = await db
         .select({

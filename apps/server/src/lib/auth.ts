@@ -1,20 +1,27 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "../db";
 import * as schema from "../db/schema/auth";
 import { env } from "cloudflare:workers";
+import { createDatabaseConnection } from "./db-factory";
 
-export const auth: ReturnType<typeof betterAuth> = betterAuth({
-  database: drizzleAdapter(db, {
-    provider: "pg",
+// Create a function that returns the auth configuration with a fresh database connection
+export function createAuth() {
+  const db = createDatabaseConnection(env);
+  
+  return betterAuth({
+    database: drizzleAdapter(db, {
+      provider: "pg",
+      schema: schema,
+    }),
+    trustedOrigins: [env.CORS_ORIGIN],
+    emailAndPassword: {
+      enabled: true,
+    },
+    secret: env.BETTER_AUTH_SECRET,
+    baseURL: env.BETTER_AUTH_URL,
+    basePath: "/auth",
+  });
+}
 
-    schema: schema,
-  }),
-  trustedOrigins: [env.CORS_ORIGIN],
-  emailAndPassword: {
-    enabled: true,
-  },
-  secret: env.BETTER_AUTH_SECRET,
-  baseURL: env.BETTER_AUTH_URL,
-  basePath: "/auth",
-});
+// Export the auth instance for backward compatibility
+export const auth = createAuth();

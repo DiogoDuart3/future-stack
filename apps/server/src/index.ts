@@ -2,13 +2,12 @@ import { env } from "cloudflare:workers";
 import { RPCHandler } from "@orpc/server/fetch";
 import { createContext } from "./lib/context";
 import { appRouter } from "./routers/index";
-import { auth } from "./lib/auth";
+import { createAuth } from "./lib/auth";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { AdminChat } from "./durable-objects/admin-chat";
 import { PublicChat } from "./durable-objects/public-chat";
-import { db } from "./db";
 import { user } from "./db/schema/auth";
 import { todo } from "./db/schema/todo";
 import { eq, sql } from "drizzle-orm";
@@ -19,6 +18,7 @@ import {
   getImageUrl,
 } from "./lib/r2";
 import { broadcastToAdminChat } from "./lib/broadcast";
+import { createDatabaseConnection } from "./lib/db-factory";
 import type {
   Env,
   BroadcastMessageRequest,
@@ -39,7 +39,7 @@ app.use(
   })
 );
 
-app.on(["POST", "GET"], "/auth/**", (c) => auth.handler(c.req.raw));
+app.on(["POST", "GET"], "/auth/**", (c) => createAuth().handler(c.req.raw));
 
 // Direct HTTP endpoint for creating todos with images
 app.post("/todos/create-with-image", async (c) => {
@@ -68,6 +68,7 @@ app.post("/todos/create-with-image", async (c) => {
     });
 
     // Create the todo first
+    const db = createDatabaseConnection(c.env);
     const result = await db
       .insert(todo)
       .values({
@@ -210,12 +211,13 @@ app.get("/ws/admin-chat", async (c) => {
 
   try {
     // Validate session using better-auth
-    const session = await auth.api.getSession(c.req.raw);
+    const session = await createAuth().api.getSession(c.req.raw);
     if (!session || !session.user) {
       return c.text("Invalid session", 401);
     }
 
     // Verify user is admin
+    const db = createDatabaseConnection(c.env);
     const userRecord = await db
       .select()
       .from(user)
@@ -227,7 +229,10 @@ app.get("/ws/admin-chat", async (c) => {
 
     // Get Durable Object instance and pass validated user info
     const id = c.env.ADMIN_CHAT.idFromName("admin-chat-room");
-    const durableObject = c.env.ADMIN_CHAT.get(id);
+    const durableObject = c.env.ADMIN_CHAT.get(id, {
+      DATABASE_URL: c.env.DATABASE_URL,
+      NODE_ENV: c.env.NODE_ENV,
+    });
 
     // Create new request with user info in headers
     const wsRequest = new Request(c.req.raw.url, {
@@ -267,9 +272,10 @@ app.get("/ws/public-chat", async (c) => {
   if (authHeader) {
     try {
       // Validate session using better-auth
-      const session = await auth.api.getSession(c.req.raw);
+      const session = await createAuth().api.getSession(c.req.raw);
       if (session && session.user) {
         // Get user record to check if they exist and get profile picture
+        const db = createDatabaseConnection(c.env);
         const userRecord = await db
           .select()
           .from(user)
@@ -303,7 +309,10 @@ app.get("/ws/public-chat", async (c) => {
 
   // Get Durable Object instance and pass user info in headers
   const id = c.env.PUBLIC_CHAT.idFromName("public-chat-room");
-  const durableObject = c.env.PUBLIC_CHAT.get(id);
+  const durableObject = c.env.PUBLIC_CHAT.get(id, {
+    DATABASE_URL: c.env.DATABASE_URL,
+    NODE_ENV: c.env.NODE_ENV,
+  });
 
   // Create new request with user info in headers
   const wsRequest = new Request(c.req.raw.url, {
@@ -327,6 +336,7 @@ app.get("/health", async (c) => {
     const startTime = Date.now();
     
     // Check database connection
+    const db = createDatabaseConnection(c.env);
     const dbCheck = await db.execute(sql`SELECT 1 as health_check`);
     
     // Check R2 connection (test bucket access)

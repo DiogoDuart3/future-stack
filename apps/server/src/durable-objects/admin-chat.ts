@@ -1,24 +1,49 @@
-import { db } from "@/db";
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
+import { drizzle as drizzlePostgres } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 import { adminChatMessages } from "@/db/schema/admin_chat_messages";
 import { eq, desc } from "drizzle-orm";
 import type { Env, ChatMessage, AuthenticatedWebSocket, UserInfo } from "../types/global";
 
 export interface DurableObjectEnv {
   ADMIN_CHAT: DurableObjectNamespace;
+  DATABASE_URL?: string;
+  NODE_ENV?: string;
 }
 
 export class AdminChat {
   private state: DurableObjectState;
+  private env: DurableObjectEnv;
   private sessions: Set<AuthenticatedWebSocket>;
   private messages: ChatMessage[];
   private typingUsers: Set<string>; // Track users who are typing
   private initialized: boolean = false;
+  private db: any;
 
   constructor(state: DurableObjectState, env: DurableObjectEnv) {
     this.state = state;
+    this.env = env;
     this.sessions = new Set();
     this.messages = [];
     this.typingUsers = new Set();
+    
+    // Create database connection within this Durable Object context
+    this.initializeDatabase();
+  }
+
+  private initializeDatabase() {
+    const isDevelopment = (this.env.NODE_ENV as string) === 'development';
+    
+    if (isDevelopment) {
+      // Use local PostgreSQL for development
+      const sql = postgres(this.env.DATABASE_URL || "postgresql://postgres:password@localhost:5432/ecomantem");
+      this.db = drizzlePostgres(sql);
+    } else {
+      // Use Neon for production
+      const sql = neon(this.env.DATABASE_URL || "");
+      this.db = drizzle(sql);
+    }
   }
 
   private async initialize() {
@@ -26,7 +51,7 @@ export class AdminChat {
 
     try {
       // Load the last 100 messages from the database, ordered by creation time
-      const dbMessages = await db
+      const dbMessages = await this.db
         .select({
           id: adminChatMessages.id,
           message: adminChatMessages.message,
@@ -220,7 +245,7 @@ export class AdminChat {
             }
           });
 
-          await db.insert(adminChatMessages).values({
+          await this.db.insert(adminChatMessages).values({
             message: message.message,
             userId: message.userId,
             userName: message.userName,

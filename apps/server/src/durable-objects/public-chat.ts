@@ -1,4 +1,7 @@
-import { db } from "@/db";
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
+import { drizzle as drizzlePostgres } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 import { publicChatMessages } from "@/db/schema/public_chat_messages";
 import { eq, desc } from "drizzle-orm";
 import type { Env, ChatMessage, AuthenticatedWebSocket, UserInfo } from "../types/global";
@@ -6,6 +9,8 @@ import { createR2Client, getImageUrl } from "../lib/r2";
 
 export interface DurableObjectEnv extends CloudflareBindings {
   PUBLIC_CHAT: DurableObjectNamespace;
+  DATABASE_URL?: string;
+  NODE_ENV?: string;
 }
 
 export class PublicChat {
@@ -15,6 +20,7 @@ export class PublicChat {
   private messages: ChatMessage[];
   private typingUsers: Set<string>;
   private initialized: boolean = false;
+  private db: any;
 
   constructor(state: DurableObjectState, env: DurableObjectEnv) {
     this.state = state;
@@ -22,6 +28,23 @@ export class PublicChat {
     this.sessions = new Set();
     this.messages = [];
     this.typingUsers = new Set();
+    
+    // Create database connection within this Durable Object context
+    this.initializeDatabase();
+  }
+
+  private initializeDatabase() {
+    const isDevelopment = (this.env.NODE_ENV as string) === 'development';
+    
+    if (isDevelopment) {
+      // Use local PostgreSQL for development
+      const sql = postgres(this.env.DATABASE_URL || "postgresql://postgres:password@localhost:5432/ecomantem");
+      this.db = drizzlePostgres(sql);
+    } else {
+      // Use Neon for production
+      const sql = neon(this.env.DATABASE_URL || "");
+      this.db = drizzle(sql);
+    }
   }
 
   private async initialize() {
@@ -29,7 +52,7 @@ export class PublicChat {
 
     try {
       // Load the last 100 messages from the database, ordered by creation time
-      const dbMessages = await db
+      const dbMessages = await this.db
         .select({
           id: publicChatMessages.id,
           message: publicChatMessages.message,
@@ -265,7 +288,7 @@ export class PublicChat {
             }
           });
 
-          await db.insert(publicChatMessages).values({
+          await this.db.insert(publicChatMessages).values({
             message: message.message,
             userId: message.userId,
             userName: message.userName,
