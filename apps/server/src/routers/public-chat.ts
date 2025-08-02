@@ -12,7 +12,7 @@ export const publicChatRouter = {
     }))
     .handler(async ({ input, context }) => {
       const env = context.env;
-      const db = createDatabaseConnection(context.env);
+      const db = createDatabaseConnection();
       
       // Verify user exists and is authorized
       const userRecord = await db.select().from(user).where(eq(user.id, input.userId)).limit(1);
@@ -41,7 +41,7 @@ export const publicChatRouter = {
       limit: z.number().min(1).max(100).default(50)
     }))
     .handler(async ({ input, context }) => {
-      const db = createDatabaseConnection(context.env);
+      const db = createDatabaseConnection();
       const messages = await db
         .select({
           id: publicChatMessages.id,
@@ -62,7 +62,7 @@ export const publicChatRouter = {
   getUserInfo: publicProcedure
     .input(z.object({ userId: z.string() }))
     .handler(async ({ input, context }) => {
-      const db = createDatabaseConnection(context.env);
+      const db = createDatabaseConnection();
       const userRecord = await db
         .select({
           id: user.id,

@@ -2,8 +2,9 @@ import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { drizzle as drizzlePostgres } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
+import { env } from "cloudflare:workers";
 
-export function createDatabaseConnection(env: { DATABASE_URL?: string; NODE_ENV?: string }) {
+export function createDatabaseConnection() {
   const isDevelopment = (env.NODE_ENV as string) === 'development';
   
   if (isDevelopment) {

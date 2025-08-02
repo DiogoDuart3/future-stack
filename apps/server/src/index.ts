@@ -68,7 +68,7 @@ app.post("/todos/create-with-image", async (c) => {
     });
 
     // Create the todo first
-    const db = createDatabaseConnection(c.env);
+    const db = createDatabaseConnection();
     const result = await db
       .insert(todo)
       .values({
@@ -217,7 +217,7 @@ app.get("/ws/admin-chat", async (c) => {
     }
 
     // Verify user is admin
-    const db = createDatabaseConnection(c.env);
+    const db = createDatabaseConnection();
     const userRecord = await db
       .select()
       .from(user)
@@ -274,7 +274,7 @@ app.get("/ws/public-chat", async (c) => {
       const session = await createAuth().api.getSession(c.req.raw);
       if (session && session.user) {
         // Get user record to check if they exist and get profile picture
-        const db = createDatabaseConnection(c.env);
+        const db = createDatabaseConnection();
         const userRecord = await db
           .select()
           .from(user)
@@ -334,7 +334,7 @@ app.get("/health", async (c) => {
     const startTime = Date.now();
     
     // Check database connection
-    const db = createDatabaseConnection(c.env);
+    const db = createDatabaseConnection();
     const dbCheck = await db.execute(sql`SELECT 1 as health_check`);
     
     // Check R2 connection (test bucket access)

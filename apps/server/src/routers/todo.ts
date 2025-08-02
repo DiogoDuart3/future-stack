@@ -9,14 +9,14 @@ import type { Env } from "../types/global";
 
 export const todoRouter = {
   getAll: publicProcedure.handler(async ({ context }) => {
-    const db = createDatabaseConnection(context.env);
+    const db = createDatabaseConnection();
     return await db.select().from(todo);
   }),
 
   getAllWithImages: publicProcedure.handler(async ({ context }) => {
     try {
       console.log('getAllWithImages called');
-      const db = createDatabaseConnection(context.env);
+      const db = createDatabaseConnection();
       const todos = await db.select().from(todo).orderBy(desc(todo.createdAt));
       console.log('Todos fetched:', todos.length);
       
@@ -70,7 +70,7 @@ export const todoRouter = {
       console.error('Error in getAllWithImages:', error);
       // Fallback to regular getAll if there's an error
       console.log('Falling back to regular getAll');
-      const db = createDatabaseConnection(context.env);
+      const db = createDatabaseConnection();
       return await db.select().from(todo);
     }
   }),
@@ -81,7 +81,7 @@ export const todoRouter = {
       imageUrl: z.string().optional()
     }))
     .handler(async ({ input, context }) => {
-      const db = createDatabaseConnection(context.env);
+      const db = createDatabaseConnection();
       const result = await db
         .insert(todo)
         .values({
@@ -119,7 +119,7 @@ export const todoRouter = {
       
       const env = context.env as Env;
       const r2 = createR2Client(env);
-      const db = createDatabaseConnection(context.env);
+      const db = createDatabaseConnection();
       
       try {
         // Decode base64 file data
@@ -150,7 +150,7 @@ export const todoRouter = {
   toggle: publicProcedure
     .input(z.object({ id: z.number(), completed: z.boolean() }))
     .handler(async ({ input, context }) => {
-      const db = createDatabaseConnection(context.env);
+      const db = createDatabaseConnection();
       return await db
         .update(todo)
         .set({ completed: input.completed })
@@ -160,7 +160,7 @@ export const todoRouter = {
   delete: publicProcedure
     .input(z.object({ id: z.number() }))
     .handler(async ({ input, context }) => {
-      const db = createDatabaseConnection(context.env);
+      const db = createDatabaseConnection();
       const result = await db.delete(todo).where(eq(todo.id, input.id));
       
       // Example: Broadcast a notification when a todo is deleted
@@ -211,7 +211,7 @@ export const todoRouter = {
   testGetAllWithImages: publicProcedure.handler(async ({ context }) => {
     try {
       console.log('Testing getAllWithImages...');
-      const db = createDatabaseConnection(context.env);
+      const db = createDatabaseConnection();
       const todos = await db.select().from(todo);
       console.log('Found todos:', todos.length);
       

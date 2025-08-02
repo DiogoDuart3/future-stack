@@ -7,7 +7,7 @@ import { createDatabaseConnection } from "./db-factory";
 // Create a function that returns the auth configuration with a fresh database connection
 export function createAuth() {
   try {
-    const db = createDatabaseConnection(env);
+    const db = createDatabaseConnection();
     
     return betterAuth({
       database: drizzleAdapter(db, {

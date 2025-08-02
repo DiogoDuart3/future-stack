@@ -16,7 +16,7 @@ export const profileRouter = {
     .handler(async ({ input, context }) => {
       const env = context.env;
       const r2 = createR2Client(env);
-      const db = createDatabaseConnection(context.env);
+      const db = createDatabaseConnection();
       
       // Validate file type
       if (!input.contentType.startsWith('image/')) {
@@ -70,7 +70,7 @@ export const profileRouter = {
     .handler(async ({ input, context }) => {
       const env = context.env;
       const r2 = createR2Client(env);
-      const db = createDatabaseConnection(context.env);
+      const db = createDatabaseConnection();
       
       // Get user's profile picture key
       const userRecord = await db
@@ -99,7 +99,7 @@ export const profileRouter = {
     .handler(async ({ input, context }) => {
       const env = context.env;
       const r2 = createR2Client(env);
-      const db = createDatabaseConnection(context.env);
+      const db = createDatabaseConnection();
       
       const userRecord = await db
         .select({
