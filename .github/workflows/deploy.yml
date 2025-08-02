@@ -143,6 +143,7 @@ jobs:
       - name: Deploy web app to Cloudflare Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          VITE_SERVER_URL: https://ecomantem-api.diogodev.pt
         run: |
           cd apps/web
           bun run deploy
