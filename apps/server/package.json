@@ -10,6 +10,7 @@
     "dev": "wrangler dev --port=3008",
     "start": "wrangler dev",
     "deploy": "wrangler deploy",
+    "deploy:with-migrations": "bun run db:migrate && wrangler deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
