@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(bun add:*)",
-      "Bash(wrangler deploy:*)"
+      "Bash(wrangler deploy:*)",
+      "Bash(npm run check-types:*)"
     ],
     "deny": []
   }

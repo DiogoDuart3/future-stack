@@ -1,12 +1,12 @@
 import { eq } from "drizzle-orm";
 import z from "zod";
 import { user } from "../db/schema/auth";
-import { publicProcedure } from "../lib/orpc";
+import { publicProcedure, o } from "../lib/orpc";
 import { createDatabaseConnection } from "../lib/db-factory";
 import { uploadImageToBinding, getImageUrlFromBinding } from "../lib/r2";
 import type { Env } from "../types/global";
 
-export const profileRouter = {
+export const profileRouter = o.router({
   uploadProfilePicture: publicProcedure
     .input(z.object({
       userId: z.string(),
@@ -139,4 +139,4 @@ export const profileRouter = {
         createdAt: userRecord[0].createdAt,
       };
     }),
-}; 
+}); 
