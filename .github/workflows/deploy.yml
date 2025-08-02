@@ -88,85 +88,21 @@ jobs:
           cd apps/server
           bun run db:migrate
 
-  deploy-server:
-    needs: [build, migrate-database]
-    runs-on: ubuntu-latest
-    environment: production
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Deploy server to Cloudflare Workers
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: |
-          cd apps/server
-          bun run deploy
-
-  deploy-web:
-    needs: [build, deploy-server]
-    runs-on: ubuntu-latest
-    environment: production
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Deploy web app to Cloudflare Pages
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          VITE_SERVER_URL: https://ecomantem-api.diogodev.pt
-        run: |
-          cd apps/web
-          bun run deploy
-
   notify:
-    needs: [migrate-database, deploy-server, deploy-web]
+    needs: [migrate-database]
     runs-on: ubuntu-latest
     if: always()
     
     steps:
       - name: Notify deployment success
-        if: needs.migrate-database.result == 'success' && needs.deploy-server.result == 'success' && needs.deploy-web.result == 'success'
+        if: needs.migrate-database.result == 'success'
         run: |
           echo "✅ Deployment completed successfully!"
           echo "🗄️ Database migrations applied"
-          echo "🔧 Server deployed to Cloudflare Workers (ecomantem-server)"
-          echo "🌐 Web app deployed to Cloudflare Pages"
 
       - name: Notify deployment failure
-        if: needs.migrate-database.result == 'failure' || needs.deploy-server.result == 'failure' || needs.deploy-web.result == 'failure'
+        if: needs.migrate-database.result == 'failure'
         run: |
           echo "❌ Deployment failed!"
           echo "Database migration status: ${{ needs.migrate-database.result }}"
-          echo "Server deployment status: ${{ needs.deploy-server.result }}"
-          echo "Web deployment status: ${{ needs.deploy-web.result }}"
           echo "Please check the logs for more details." 
