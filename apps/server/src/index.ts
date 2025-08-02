@@ -7,6 +7,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { AdminChat as AdminChatClass } from "./durable-objects/admin-chat";
+import { PublicChat as PublicChatClass } from "./durable-objects/public-chat";
 import { db } from "./db";
 import { user } from "./db/schema/auth";
 import { todo } from "./db/schema/todo";
@@ -246,6 +247,80 @@ app.get("/ws/admin-chat", async (c) => {
   }
 });
 
+// WebSocket route for public chat
+app.get("/ws/public-chat", async (c) => {
+  const upgradeHeader = c.req.header("upgrade");
+  if (upgradeHeader !== "websocket") {
+    return c.text("Expected websocket", 400);
+  }
+
+  // Check for authentication
+  const authHeader = c.req.header("Authorization") || c.req.header("Cookie");
+  let isGuest = false;
+  let userInfo = {
+    userId: "",
+    userName: "",
+    userEmail: "",
+    userProfilePicture: "",
+  };
+
+  if (authHeader) {
+    try {
+      // Validate session using better-auth
+      const session = await auth.api.getSession(c.req.raw);
+      if (session && session.user) {
+        // Get user record to check if they exist and get profile picture
+        const userRecord = await db
+          .select()
+          .from(user)
+          .where(eq(user.id, session.user.id))
+          .limit(1);
+        if (userRecord[0]) {
+          userInfo = {
+            userId: session.user.id,
+            userName: session.user.name || "User",
+            userEmail: session.user.email || "",
+            userProfilePicture: userRecord[0].profilePicture || "",
+          };
+        }
+      }
+    } catch (error) {
+      console.error("WebSocket auth error:", error);
+      // Continue as guest if auth fails
+    }
+  }
+
+  // If no valid session, treat as guest
+  if (!userInfo.userId) {
+    isGuest = true;
+    userInfo = {
+      userId: `guest_${crypto.randomUUID()}`,
+      userName: "Guest",
+      userEmail: "",
+      userProfilePicture: "",
+    };
+  }
+
+  // Get Durable Object instance and pass user info in headers
+  const id = c.env.PUBLIC_CHAT.idFromName("public-chat-room");
+  const durableObject = c.env.PUBLIC_CHAT.get(id);
+
+  // Create new request with user info in headers
+  const wsRequest = new Request(c.req.raw.url, {
+    method: c.req.raw.method,
+    headers: {
+      ...Object.fromEntries(c.req.raw.headers.entries()),
+      "x-user-id": userInfo.userId,
+      "x-user-name": userInfo.userName,
+      "x-user-email": userInfo.userEmail,
+      "x-user-profile-picture": userInfo.userProfilePicture,
+      "x-is-guest": isGuest.toString(),
+    },
+  });
+
+  return durableObject.fetch(wsRequest);
+});
+
 // Health check endpoint
 app.get("/health", async (c) => {
   try {
@@ -273,11 +348,13 @@ app.get("/health", async (c) => {
       };
     }
     
-    // Check Durable Objects (AdminChat)
+    // Check Durable Objects (AdminChat and PublicChat)
     let durableObjectCheck: { status: string; error?: string } = { status: "unknown" };
     try {
-      const id = c.env.ADMIN_CHAT.idFromName("health-check");
-      const durableObject = c.env.ADMIN_CHAT.get(id);
+      const adminChatId = c.env.ADMIN_CHAT.idFromName("health-check");
+      const publicChatId = c.env.PUBLIC_CHAT.idFromName("health-check");
+      const adminChatObject = c.env.ADMIN_CHAT.get(adminChatId);
+      const publicChatObject = c.env.PUBLIC_CHAT.get(publicChatId);
       durableObjectCheck = { status: "healthy" };
     } catch (error) {
       durableObjectCheck = { 
@@ -338,5 +415,6 @@ app.get("/", (c) => {
 
 export default app;
 
-// Export the Durable Object class
+// Export the Durable Object classes
 export const AdminChat = AdminChatClass;
+export const PublicChat = PublicChatClass;

@@ -24,13 +24,18 @@
         "name": "ADMIN_CHAT",
         "class_name": "AdminChat",
         "script_name": "ecomantem-server"
+      },
+      {
+        "name": "PUBLIC_CHAT",
+        "class_name": "PublicChat",
+        "script_name": "ecomantem-server"
       }
     ]
   },
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["AdminChat"]
+      "new_sqlite_classes": ["AdminChat", "PublicChat"]
     }
   ],
   "observability": {

@@ -2,6 +2,7 @@
 
 export interface Env extends CloudflareBindings {
   ADMIN_CHAT: DurableObjectNamespace;
+  PUBLIC_CHAT: DurableObjectNamespace;
   TODO_IMAGES: R2Bucket;
   CORS_ORIGIN: string;
   BETTER_AUTH_SECRET: string;
@@ -19,6 +20,7 @@ export interface ChatMessage {
   userName: string;
   message: string;
   timestamp: number;
+  userProfilePicture?: string;
 }
 
 // WebSocket with user authentication
@@ -26,6 +28,7 @@ export interface AuthenticatedWebSocket extends WebSocket {
   userId?: string;
   userName?: string;
   userEmail?: string;
+  userProfilePicture?: string;
 }
 
 // User info for WebSocket connections
@@ -33,6 +36,8 @@ export interface UserInfo {
   userId: string;
   userName: string;
   userEmail: string | null;
+  userProfilePicture?: string;
+  isGuest?: boolean;
 }
 
 // Broadcast message request

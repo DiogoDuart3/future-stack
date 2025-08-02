@@ -33,6 +33,7 @@
     "@orpc/server": "^1.5.0",
     "@orpc/tanstack-query": "^1.5.0",
     "@paralleldrive/cuid2": "^2.2.2",
+    "@radix-ui/react-scroll-area": "^1.2.9",
     "@tailwindcss/vite": "^4.0.15",
     "@tanstack/react-form": "^1.12.3",
     "@tanstack/react-query": "^5.80.5",

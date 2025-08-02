@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TodosOfflineRouteImport } from './routes/todos-offline'
 import { Route as TodosRouteImport } from './routes/todos'
+import { Route as PublicChatRouteImport } from './routes/public-chat'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InstallPwaRouteImport } from './routes/install-pwa'
 import { Route as HealthRouteImport } from './routes/health'
@@ -26,6 +28,16 @@ const TodosOfflineRoute = TodosOfflineRouteImport.update({
 const TodosRoute = TodosRouteImport.update({
   id: '/todos',
   path: '/todos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PublicChatRoute = PublicChatRouteImport.update({
+  id: '/public-chat',
+  path: '/public-chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -66,6 +78,8 @@ export interface FileRoutesByFullPath {
   '/health': typeof HealthRoute
   '/install-pwa': typeof InstallPwaRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
+  '/public-chat': typeof PublicChatRoute
   '/todos': typeof TodosRoute
   '/todos-offline': typeof TodosOfflineRoute
 }
@@ -76,6 +90,8 @@ export interface FileRoutesByTo {
   '/health': typeof HealthRoute
   '/install-pwa': typeof InstallPwaRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
+  '/public-chat': typeof PublicChatRoute
   '/todos': typeof TodosRoute
   '/todos-offline': typeof TodosOfflineRoute
 }
@@ -87,6 +103,8 @@ export interface FileRoutesById {
   '/health': typeof HealthRoute
   '/install-pwa': typeof InstallPwaRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
+  '/public-chat': typeof PublicChatRoute
   '/todos': typeof TodosRoute
   '/todos-offline': typeof TodosOfflineRoute
 }
@@ -99,6 +117,8 @@ export interface FileRouteTypes {
     | '/health'
     | '/install-pwa'
     | '/login'
+    | '/profile'
+    | '/public-chat'
     | '/todos'
     | '/todos-offline'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +129,8 @@ export interface FileRouteTypes {
     | '/health'
     | '/install-pwa'
     | '/login'
+    | '/profile'
+    | '/public-chat'
     | '/todos'
     | '/todos-offline'
   id:
@@ -119,6 +141,8 @@ export interface FileRouteTypes {
     | '/health'
     | '/install-pwa'
     | '/login'
+    | '/profile'
+    | '/public-chat'
     | '/todos'
     | '/todos-offline'
   fileRoutesById: FileRoutesById
@@ -130,6 +154,8 @@ export interface RootRouteChildren {
   HealthRoute: typeof HealthRoute
   InstallPwaRoute: typeof InstallPwaRoute
   LoginRoute: typeof LoginRoute
+  ProfileRoute: typeof ProfileRoute
+  PublicChatRoute: typeof PublicChatRoute
   TodosRoute: typeof TodosRoute
   TodosOfflineRoute: typeof TodosOfflineRoute
 }
@@ -148,6 +174,20 @@ declare module '@tanstack/react-router' {
       path: '/todos'
       fullPath: '/todos'
       preLoaderRoute: typeof TodosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/public-chat': {
+      id: '/public-chat'
+      path: '/public-chat'
+      fullPath: '/public-chat'
+      preLoaderRoute: typeof PublicChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -202,6 +242,8 @@ const rootRouteChildren: RootRouteChildren = {
   HealthRoute: HealthRoute,
   InstallPwaRoute: InstallPwaRoute,
   LoginRoute: LoginRoute,
+  ProfileRoute: ProfileRoute,
+  PublicChatRoute: PublicChatRoute,
   TodosRoute: TodosRoute,
   TodosOfflineRoute: TodosOfflineRoute,
 }

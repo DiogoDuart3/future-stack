@@ -8,6 +8,13 @@
       "when": 1754058135708,
       "tag": "0000_right_epoch",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1754127605891,
+      "tag": "0001_safe_nekra",
+      "breakpoints": true
     }
   ]
 }
