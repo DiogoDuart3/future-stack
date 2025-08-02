@@ -2,19 +2,19 @@ import { eq } from "drizzle-orm";
 import z from "zod";
 import { user } from "../db/schema/auth";
 import { publicProcedure } from "../lib/orpc";
-import { createR2Client, uploadImage, getImageUrl } from "../lib/r2";
 import { createDatabaseConnection } from "../lib/db-factory";
+import { createR2Client, uploadImage, getImageUrl } from "../lib/r2";
 
 export const profileRouter = {
   uploadProfilePicture: publicProcedure
     .input(z.object({
       userId: z.string(),
+      fileData: z.string(), // base64 encoded file
       filename: z.string(),
       contentType: z.string(),
-      fileData: z.string() // Base64 encoded file data
     }))
     .handler(async ({ input, context }) => {
-      const env = context.env as CloudflareBindings;
+      const env = context.env;
       const r2 = createR2Client(env);
       const db = createDatabaseConnection(context.env);
       
@@ -68,7 +68,7 @@ export const profileRouter = {
       userId: z.string(),
     }))
     .handler(async ({ input, context }) => {
-      const env = context.env as CloudflareBindings;
+      const env = context.env;
       const r2 = createR2Client(env);
       const db = createDatabaseConnection(context.env);
       
@@ -97,7 +97,7 @@ export const profileRouter = {
       userId: z.string(),
     }))
     .handler(async ({ input, context }) => {
-      const env = context.env as CloudflareBindings;
+      const env = context.env;
       const r2 = createR2Client(env);
       const db = createDatabaseConnection(context.env);
       
@@ -113,12 +113,13 @@ export const profileRouter = {
         .from(user)
         .where(eq(user.id, input.userId))
         .limit(1);
-      
+
       if (!userRecord[0]) {
         throw new Error('User not found');
       }
-      
-      let profilePictureUrl = null;
+
+      // Generate signed URL for profile picture if it exists
+      let profilePictureUrl: string | null = null;
       if (userRecord[0].profilePicture) {
         try {
           profilePictureUrl = await getImageUrl(r2, "ecomantem-todo-images", userRecord[0].profilePicture);
@@ -126,10 +127,15 @@ export const profileRouter = {
           console.error('Error generating profile picture URL:', error);
         }
       }
-      
+
       return {
-        ...userRecord[0],
+        id: userRecord[0].id,
+        name: userRecord[0].name,
+        email: userRecord[0].email,
+        profilePicture: userRecord[0].profilePicture,
         profilePictureUrl,
+        isAdmin: userRecord[0].isAdmin,
+        createdAt: userRecord[0].createdAt,
       };
     }),
 }; 

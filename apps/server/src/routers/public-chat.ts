@@ -11,7 +11,7 @@ export const publicChatRouter = {
       userId: z.string(),
     }))
     .handler(async ({ input, context }) => {
-      const env = context.env as CloudflareBindings & { PUBLIC_CHAT: DurableObjectNamespace };
+      const env = context.env;
       const db = createDatabaseConnection(context.env);
       
       // Verify user exists and is authorized
@@ -22,15 +22,14 @@ export const publicChatRouter = {
 
       // Get Durable Object instance
       const id = env.PUBLIC_CHAT.idFromName("public-chat-room");
-      const durableObject = env.PUBLIC_CHAT.get(id, {
-        DATABASE_URL: env.DATABASE_URL,
-        NODE_ENV: env.NODE_ENV,
-      });
+      const durableObject = env.PUBLIC_CHAT.get(id);
 
       // Create WebSocket connection
       const response = await durableObject.fetch(new Request(`${env.BETTER_AUTH_URL}/ws/public-chat`, {
         headers: {
           "Upgrade": "websocket",
+          "x-database-url": env.DATABASE_URL || "",
+          "x-node-env": env.NODE_ENV || "",
         },
       }));
 

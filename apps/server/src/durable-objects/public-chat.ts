@@ -7,7 +7,7 @@ import { eq, desc } from "drizzle-orm";
 import type { Env, ChatMessage, AuthenticatedWebSocket, UserInfo } from "../types/global";
 import { createR2Client, getImageUrl } from "../lib/r2";
 
-export interface DurableObjectEnv extends CloudflareBindings {
+export interface DurableObjectEnv {
   PUBLIC_CHAT: DurableObjectNamespace;
 }
 

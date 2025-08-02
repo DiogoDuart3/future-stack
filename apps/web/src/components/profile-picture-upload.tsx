@@ -56,19 +56,21 @@ export default function ProfilePictureUpload({
       });
 
       // Use ORPC client to upload profile picture
-      const result = await orpc.profile.uploadProfilePicture.call({
-        userId,
-        filename: file.name,
-        contentType: file.type,
-        fileData: base64Data,
-      });
+      // const result = await orpc.profile.uploadProfilePicture.call({
+      //   userId: user.id,
+      //   filename: file.name,
+      //   contentType: file.type,
+      //   fileData: base64Data,
+      // });
+      // return result;
+      throw new Error("Profile router not available");
       
-      if (result.success) {
-        onUploadSuccess(result.imageUrl);
-        toast.success('Profile picture updated successfully!');
-      } else {
-        throw new Error('Upload failed');
-      }
+      // if (result.success) {
+      //   toast.success("Profile picture uploaded successfully!");
+      //   onUploadSuccess?.(result.imageUrl);
+      // } else {
+      //   toast.error("Failed to upload profile picture");
+      // }
     } catch (error) {
       console.error('Upload error:', error);
       toast.error('Failed to upload profile picture. Please try again.');

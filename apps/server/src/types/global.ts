@@ -1,6 +1,6 @@
 // Global type definitions for the entire API
 
-export interface Env extends CloudflareBindings {
+export interface Env {
   ADMIN_CHAT: DurableObjectNamespace;
   PUBLIC_CHAT: DurableObjectNamespace;
   TODO_IMAGES: R2Bucket;
@@ -11,6 +11,7 @@ export interface Env extends CloudflareBindings {
   CLOUDFLARE_ACCOUNT_ID: string;
   R2_ACCESS_KEY_ID: string;
   R2_SECRET_ACCESS_KEY: string;
+  NODE_ENV: string;
 }
 
 // Chat message interface

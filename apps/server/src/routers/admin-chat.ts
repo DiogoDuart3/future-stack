@@ -10,7 +10,7 @@ export const adminChatRouter = {
       userId: z.string(),
     }))
     .handler(async ({ input, context }) => {
-      const env = context.env as CloudflareBindings & { ADMIN_CHAT: DurableObjectNamespace };
+      const env = context.env;
       const db = createDatabaseConnection(context.env);
       
       // Verify user is admin
@@ -21,15 +21,14 @@ export const adminChatRouter = {
 
       // Get Durable Object instance
       const id = env.ADMIN_CHAT.idFromName("admin-chat-room");
-      const durableObject = env.ADMIN_CHAT.get(id, {
-        DATABASE_URL: env.DATABASE_URL,
-        NODE_ENV: env.NODE_ENV,
-      });
+      const durableObject = env.ADMIN_CHAT.get(id);
 
       // Create WebSocket connection
       const response = await durableObject.fetch(new Request(`${env.BETTER_AUTH_URL}/ws/admin-chat`, {
         headers: {
           "Upgrade": "websocket",
+          "x-database-url": env.DATABASE_URL || "",
+          "x-node-env": env.NODE_ENV || "",
         },
       }));
 

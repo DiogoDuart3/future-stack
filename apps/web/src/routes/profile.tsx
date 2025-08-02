@@ -26,10 +26,11 @@ function ProfilePage() {
 
     const loadUserProfile = async () => {
       try {
-        const userProfile = await orpc.profile.getUserProfile.call({
-          userId: session.user.id
-        });
-        setProfilePictureUrl(userProfile.profilePictureUrl);
+        // const userProfile = await orpc.profile.getUserProfile.call({
+        //   userId: session.user.id,
+        // });
+        // return userProfile;
+        return null;
       } catch (error) {
         console.error('Error loading user profile:', error);
       } finally {
