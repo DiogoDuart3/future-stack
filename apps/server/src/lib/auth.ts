@@ -6,21 +6,26 @@ import { createDatabaseConnection } from "./db-factory";
 
 // Create a function that returns the auth configuration with a fresh database connection
 export function createAuth() {
-  const db = createDatabaseConnection(env);
-  
-  return betterAuth({
-    database: drizzleAdapter(db, {
-      provider: "pg",
-      schema: schema,
-    }),
-    trustedOrigins: [env.CORS_ORIGIN],
-    emailAndPassword: {
-      enabled: true,
-    },
-    secret: env.BETTER_AUTH_SECRET,
-    baseURL: env.BETTER_AUTH_URL,
-    basePath: "/auth",
-  });
+  try {
+    const db = createDatabaseConnection(env);
+    
+    return betterAuth({
+      database: drizzleAdapter(db, {
+        provider: "pg",
+        schema: schema,
+      }),
+      trustedOrigins: [env.CORS_ORIGIN],
+      emailAndPassword: {
+        enabled: true,
+      },
+      secret: env.BETTER_AUTH_SECRET,
+      baseURL: env.BETTER_AUTH_URL,
+      basePath: "/auth",
+    });
+  } catch (error) {
+    console.error("Failed to create auth configuration:", error);
+    throw error;
+  }
 }
 
 // Export the auth instance for backward compatibility (but this should be avoided)

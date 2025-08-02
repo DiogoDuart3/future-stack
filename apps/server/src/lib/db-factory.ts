@@ -12,7 +12,10 @@ export function createDatabaseConnection(env: { DATABASE_URL?: string; NODE_ENV?
     return drizzlePostgres(sql);
   } else {
     // Use Neon for production
-    const sql = neon(env.DATABASE_URL || "");
+    if (!env.DATABASE_URL || env.DATABASE_URL === "") {
+      throw new Error("DATABASE_URL environment variable is required for production. Please set it in your Cloudflare Workers environment variables.");
+    }
+    const sql = neon(env.DATABASE_URL);
     return drizzle(sql);
   }
 } 
