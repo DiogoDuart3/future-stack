@@ -26,6 +26,9 @@ import type {
   ErrorResponse,
 } from "./types/global";
 
+// Create a single auth instance to reuse throughout the application
+const auth = createAuth();
+
 const app = new Hono<{ Bindings: Env }>();
 
 app.use(logger());
@@ -39,7 +42,7 @@ app.use(
   })
 );
 
-app.on(["POST", "GET"], "/auth/**", (c) => createAuth().handler(c.req.raw));
+app.on(["POST", "GET"], "/auth/**", (c) => auth.handler(c.req.raw));
 
 // Direct HTTP endpoint for creating todos with images
 app.post("/todos/create-with-image", async (c) => {
@@ -184,7 +187,7 @@ app.post("/admin-chat/broadcast", async (c) => {
 
 const handler = new RPCHandler(appRouter);
 app.use("/rpc/*", async (c, next) => {
-  const context = await createContext({ context: c });
+  const context = await createContext({ context: c, auth });
   const { matched, response } = await handler.handle(c.req.raw, {
     prefix: "/rpc",
     context: context,
@@ -211,7 +214,7 @@ app.get("/ws/admin-chat", async (c) => {
 
   try {
     // Validate session using better-auth
-    const session = await createAuth().api.getSession(c.req.raw);
+    const session = await auth.api.getSession(c.req.raw);
     if (!session || !session.user) {
       return c.text("Invalid session", 401);
     }
@@ -271,7 +274,7 @@ app.get("/ws/public-chat", async (c) => {
   if (authHeader) {
     try {
       // Validate session using better-auth
-      const session = await createAuth().api.getSession(c.req.raw);
+      const session = await auth.api.getSession(c.req.raw);
       if (session && session.user) {
         // Get user record to check if they exist and get profile picture
         const db = createDatabaseConnection();
