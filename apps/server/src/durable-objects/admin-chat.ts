@@ -32,11 +32,15 @@ export class AdminChat {
     const isDevelopment = nodeEnv === 'development';
     
     if (isDevelopment) {
-      // Use local PostgreSQL for development
-      const sql = postgres(databaseUrl || "postgresql://postgres:password@localhost:5432/ecomantem");
+      // Use local PostgreSQL for development with optimized settings
+      const sql = postgres(databaseUrl || "postgresql://postgres:password@localhost:5432/ecomantem", {
+        max: 1, // Limit connections to prevent CPU time limit
+        idle_timeout: 20, // Close idle connections after 20 seconds
+        connect_timeout: 10, // Connection timeout of 10 seconds
+      });
       this.db = drizzlePostgres(sql);
     } else {
-      // Use Neon for production
+      // Use Neon for production with optimized settings
       const sql = neon(databaseUrl || "");
       this.db = drizzle(sql);
     }

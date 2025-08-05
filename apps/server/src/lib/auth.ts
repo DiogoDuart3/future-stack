@@ -27,6 +27,3 @@ export function createAuth() {
     throw error;
   }
 }
-
-// Export the auth instance for backward compatibility (but this should be avoided)
-export const auth = createAuth();
